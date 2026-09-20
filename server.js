@@ -27,7 +27,7 @@ const rooms = {};
 io.on('connection', (socket) => {
     console.log(`사용자 접속: ${socket.id}`);
 
-    // 싱글 플레이(찐따 플레이) 시작 요청 처리 (난이도 포함)
+    // 싱글 플레이 시작 요청 처리 (난이도 포함)
     socket.on('start-single-play', (difficulty) => {
         const roomCode = 'single_' + socket.id;
         
@@ -219,12 +219,16 @@ io.on('connection', (socket) => {
                         attackBox.y < enemy.y + enemy.height &&
                         attackBox.y + enemy.height > enemy.y) {
                         
-                        enemy.hp -= p.meleeDamage;
+                        // 샌드백 모드일 경우 데미지를 입지 않고 체력이 유지됨
+                        if (!(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
+                            enemy.hp -= p.meleeDamage;
+                        }
+                        
                         const knockDir = p.facing === 'right' ? 1 : -1;
                         enemy.x += knockDir * 40; 
                         room.screenShake = 10; 
 
-                        if (enemy.hp <= 0) {
+                        if (enemy.hp <= 0 && !(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
                             enemy.hp = 0;
                             enemy.isDead = true;
                             room.status = 'ended';
@@ -281,52 +285,58 @@ function startGameLoop(roomCode) {
                 if (diff !== 'sandbag') {
                     bot.botTimer++;
                     const dx = player.x - bot.x;
+                    const distance = Math.abs(dx);
                     
-                    let moveSpeed = bot.speed;
+                    // 적당한 이동 속도 적용 (너무 딱 붙지 않고 안정감 있게 접근)
+                    let moveSpeed = bot.speed * 0.75;
                     if (diff === 'easy') moveSpeed *= 0.5;
-                    if (diff === 'hard') moveSpeed *= 1.2;
+                    if (diff === 'hard') moveSpeed *= 1.0;
 
-                    if (Math.abs(dx) > 30) {
+                    // 플레이어와 일정 거리(약 30~35px)를 유지하며 접근하도록 설정
+                    if (distance > 35) {
                         bot.vx = dx > 0 ? moveSpeed : -moveSpeed;
                         bot.facing = dx > 0 ? 'right' : 'left';
                     } else {
-                        bot.vx = 0;
-                        if (diff !== 'easy' && bot.botTimer % 45 === 0) {
-                            bot.isAttacking = true;
-                            setTimeout(() => { bot.isAttacking = false; }, 200);
+                        bot.vx = 0; // 너무 붙었을 때는 멈춰서 공격 타이밍 조절
+                    }
 
-                            const attackBox = {
-                                x: bot.facing === 'right' ? bot.x + bot.width : bot.x - 40,
-                                y: bot.y,
-                                width: 40,
-                                height: bot.height
-                            };
+                    // 공격 범위 내에 들어왔을 때 정확하게 공격 시도
+                    const attackInterval = diff === 'hard' ? 35 : 60;
+                    if (distance <= 45 && bot.botTimer % attackInterval === 0) {
+                        bot.isAttacking = true;
+                        setTimeout(() => { bot.isAttacking = false; }, 200);
 
-                            if (attackBox.x < player.x + player.width &&
-                                attackBox.x + attackBox.width > player.x &&
-                                attackBox.y < player.y + player.height &&
-                                attackBox.y + player.height > player.y) {
-                                
-                                player.hp -= bot.meleeDamage;
-                                room.screenShake = 8;
+                        const attackBox = {
+                            x: bot.facing === 'right' ? bot.x + bot.width : bot.x - 40,
+                            y: bot.y,
+                            width: 40,
+                            height: bot.height
+                        };
 
-                                if (player.hp <= 0) {
-                                    player.hp = 0;
-                                    player.isDead = true;
-                                    room.status = 'ended';
-                                    io.to(roomCode).emit('game-over', { winner: 'bot' });
-                                }
+                        if (attackBox.x < player.x + player.width &&
+                            attackBox.x + attackBox.width > player.x &&
+                            attackBox.y < player.y + player.height &&
+                            attackBox.y + player.height > player.y) {
+                            
+                            player.hp -= bot.meleeDamage;
+                            room.screenShake = 8;
+
+                            if (player.hp <= 0) {
+                                player.hp = 0;
+                                player.isDead = true;
+                                room.status = 'ended';
+                                io.to(roomCode).emit('game-over', { winner: 'bot' });
                             }
                         }
                     }
 
-                    if (diff === 'hard' && bot.y >= 300 && Math.random() < 0.03) {
+                    if (diff === 'hard' && bot.y >= 300 && Math.random() < 0.02) {
                         bot.vy = bot.jumpPower;
-                    } else if (diff === 'normal' && bot.y >= 300 && Math.random() < 0.01) {
+                    } else if (diff === 'normal' && bot.y >= 300 && Math.random() < 0.008) {
                         bot.vy = bot.jumpPower;
                     }
                 } else {
-                    bot.vx = 0;
+                    bot.vx = 0; // 샌드백 모드일 때는 움직이지 않음
                 }
             }
         }
@@ -429,17 +439,21 @@ function startGameLoop(roomCode) {
                         proj.x > enemy.x && proj.x < enemy.x + enemy.width && 
                         proj.y > enemy.y && proj.y < enemy.y + enemy.height) {
                         
-                        enemy.hp -= 6;
+                        // 샌드백 모드일 경우 투사체 데미지도 무시
+                        if (!(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
+                            enemy.hp -= 6;
+                        }
+                        
                         room.screenShake = 6; 
 
-                        if (proj.color === '#ff4500') {
+                        if (proj.color === '#ff4500' && !(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
                             enemy.burnTicks = 6; 
                             enemy.burnTimer = 0;
                         }
 
                         room.projectiles.splice(i, 1);
 
-                        if (enemy.hp <= 0) {
+                        if (enemy.hp <= 0 && !(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
                             enemy.hp = 0;
                             enemy.isDead = true;
                             room.status = 'ended';
