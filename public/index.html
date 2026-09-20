@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>KFC</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            background-color: #222;
+            color: #fff;
+            margin-top: 30px;
+        }
+        .box {
+            background: #333;
+            padding: 30px;
+            display: inline-block;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            margin-top: 20px;
+        }
+        input, button {
+            padding: 10px;
+            font-size: 16px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        .hidden { display: none !important; }
+        .char-card {
+            display: inline-block;
+            background: #444;
+            padding: 20px;
+            margin: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 3px solid transparent;
+            width: 130px;
+        }
+        .char-card:hover { border-color: #ff9800; }
+        .selected { border-color: #4CAF50 !important; background: #2e5c31; }
+        #gameCanvas {
+            background: #111;
+            border: 4px solid #fff;
+            box-shadow: 0 0 20px rgba(255,255,255,0.2);
+        }
+        #resultScreen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        #resultTitle { font-size: 80px; font-weight: bold; margin-bottom: 20px; letter-spacing: 5px; }
+        .win-text { color: #4CAF50; text-shadow: 0 0 20px #4CAF50; }
+        .fail-text { color: #f44336; text-shadow: 0 0 20px #f44336; }
+    </style>
+</head>
+<body>
+
+    <!-- 1. 방 입장 화면 -->
+    <div id="lobby" class="box">
+        <h1>KFC 대기실</h1>
+        <p>3자리 호실 번호를 입력하세요!</p>
+        <input type="text" id="roomInput" placeholder="예: 123" maxlength="3">
+        <br>
+        <button id="joinBtn">호실 들어가기</button>
+    </div>
+
+    <!-- 2. 대기실 화면 -->
+    <div id="waitingRoom" class="box hidden">
+        <h1>호실 번호: <span id="displayRoomCode"></span></h1>
+        <p id="statusText">싸울 학우를 기다리는 중... (1/2)</p>
+        <br>
+        <button id="readyBtn" class="hidden">준비하기!</button>
+    </div>
+
+    <!-- 3. 부고아 선택 화면 -->
+    <div id="charSelectRoom" class="box hidden">
+        <h1>부고아를 선택하세요!</h1>
+        <div id="charList">
+            <div class="char-card" data-char="김도현">
+                <h3>김도현</h3>
+                <p>Q: 128kg | Shift: 노출증</p>
+            </div>
+            <div class="char-card" data-char="성열진">
+                <h3>성열진</h3>
+                <p>Q: 우유 좀 줄래 | Shift: 배싸</p>
+            </div>
+            <div class="char-card" data-char="조겸">
+                <h3>조겸</h3>
+                <p>Q: 여아 겁탈 | Shift: 공주페스티벌VIP</p>
+            </div>
+            <div class="char-card" data-char="강재승">
+                <h3>강재승</h3>
+                <p>Q: 오른쪽 딸근의 지배자 | Shift: 뜨끈불가마</p>
+            </div>
+        </div>
+        <br>
+        <button id="confirmCharBtn" disabled>부고아 확정</button>
+        <p id="charStatusText"></p>
+    </div>
+
+    <!-- 4. 3초 카운트다운 화면 -->
+    <div id="countdownRoom" class="box hidden">
+        <h1>대전이 곧 시작됩니다!</h1>
+        <h2 id="countdownNumber" style="font-size: 60px; color: #ffeb3b;">3</h2>
+        <p id="matchInfo"></p>
+    </div>
+
+    <!-- 5. 실제 게임 화면 -->
+    <div id="gameRoom" class="hidden">
+        <h2>조작: 방향키(이동/점프) | E키(타격) | Q키(특수) | Shift키(궁극기)</h2>
+        <canvas id="gameCanvas" width="800" height="400"></canvas>
+    </div>
+
+    <!-- 6. 승리/패배 결과 화면 -->
+    <div id="resultScreen" class="hidden">
+        <h1 id="resultTitle">WIN</h1>
+        <button id="backToLobbyBtn" style="font-size: 20px; padding: 15px 30px; background: #fff; border: none; border-radius: 5px; font-weight: bold;">메인 화면으로 돌아가기</button>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+
+        const lobby = document.getElementById('lobby');
+        const waitingRoom = document.getElementById('waitingRoom');
+        const charSelectRoom = document.getElementById('charSelectRoom');
+        const countdownRoom = document.getElementById('countdownRoom');
+        const gameRoom = document.getElementById('gameRoom');
+        const resultScreen = document.getElementById('resultScreen');
+        const resultTitle = document.getElementById('resultTitle');
+        const backToLobbyBtn = document.getElementById('backToLobbyBtn');
+
+        const roomInput = document.getElementById('roomInput');
+        const joinBtn = document.getElementById('joinBtn');
+        const displayRoomCode = document.getElementById('displayRoomCode');
+        const statusText = document.getElementById('statusText');
+        const readyBtn = document.getElementById('readyBtn');
+
+        const charCards = document.querySelectorAll('.char-card');
+        const confirmCharBtn = document.getElementById('confirmCharBtn');
+        const charStatusText = document.getElementById('charStatusText');
+        const countdownNumber = document.getElementById('countdownNumber');
+        const matchInfo = document.getElementById('matchInfo');
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const charImages = {
+            '김도현': new Image(),
+            '김도현_각성': new Image(),
+            '성열진': new Image(),
+            '조겸': new Image(),
+            '강재승': new Image()
+        };
+        charImages['김도현'].src = './images/kimdohyun.png';
+        charImages['김도현_각성'].src = './images/kimdohyun_awakened.png';
+        charImages['성열진'].src = './images/seongyeoljin.png';
+        charImages['조겸'].src = './images/jogyum.png';
+        charImages['강재승'].src = './images/kangjaeseung.png';
+
+        let currentRoom = '';
+        let selectedCharacter = null;
+        let keys = { left: false, right: false, jump: false, skill: false, qSkill: false, rSkill: false };
+        let gameInterval = null;
+
+        function enterRoom() {
+            const roomCode = roomInput.value;
+            if (roomCode.length !== 3) {
+                alert('3자리 숫자를 입력해주세요!');
+                return;
+            }
+            currentRoom = roomCode;
+            socket.emit('join-room', roomCode);
+            lobby.classList.add('hidden');
+            waitingRoom.classList.remove('hidden');
+            displayRoomCode.innerText = currentRoom;
+        }
+
+        joinBtn.addEventListener('click', enterRoom);
+
+        roomInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                enterRoom();
+            }
+        });
+
+        socket.on('room-full', () => {
+            alert('이미 꽉 찬 호실입니다!');
+            waitingRoom.classList.add('hidden');
+            lobby.classList.remove('hidden');
+        });
+
+        socket.on('update-room', (count) => {
+            statusText.innerText = `학우를 기다리는 중... (${count}/2)`;
+        });
+
+        socket.on('start-ready-phase', () => {
+            statusText.innerText = '두 명이 모였습니다! 준비 버튼을 눌러주세요.';
+            readyBtn.classList.remove('hidden');
+        });
+
+        readyBtn.addEventListener('click', () => {
+            readyBtn.disabled = true;
+            readyBtn.innerText = '준비 완료!';
+            socket.emit('player-ready');
+        });
+
+        socket.on('start-character-select', () => {
+            waitingRoom.classList.add('hidden');
+            charSelectRoom.classList.remove('hidden');
+        });
+
+        charCards.forEach(card => {
+            card.addEventListener('click', () => {
+                charCards.forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                selectedCharacter = card.getAttribute('data-char');
+                confirmCharBtn.disabled = false;
+            });
+        });
+
+        confirmCharBtn.addEventListener('click', () => {
+            if (!selectedCharacter) return;
+            confirmCharBtn.disabled = true;
+            charCards.forEach(c => c.style.pointerEvents = 'none');
+            charStatusText.innerText = `[${selectedCharacter}] 선택 완료! 상대 학우 기다리는 중...`;
+            socket.emit('select-character', selectedCharacter);
+        });
+
+        socket.on('start-countdown', () => {
+            charSelectRoom.classList.add('hidden');
+            countdownRoom.classList.remove('hidden');
+            matchInfo.innerText = `매칭 완료! 좆팡나게 싸울 준비하세요.`;
+
+            let timeLeft = 3;
+            countdownNumber.innerText = timeLeft;
+
+            const timer = setInterval(() => {
+                timeLeft--;
+                countdownNumber.innerText = timeLeft;
+
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    countdownRoom.classList.add('hidden');
+                    gameRoom.classList.remove('hidden');
+                    initGameLoop();
+                }
+            }, 1000);
+        });
+
+        window.addEventListener('keydown', (e) => {
+            if (gameRoom.classList.contains('hidden')) return;
+
+            if (e.code === 'ArrowLeft') keys.left = true;
+            if (e.code === 'ArrowRight') keys.right = true;
+            if (e.code === 'ArrowUp' || e.code === 'Space') keys.jump = true;
+            if (e.code === 'KeyE') keys.skill = true;
+            if (e.code === 'KeyQ') keys.qSkill = true;
+            if (e.code === 'ShiftLeft') {
+                e.preventDefault();
+                keys.rSkill = true;
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (gameRoom.classList.contains('hidden')) return;
+
+            if (e.code === 'ArrowLeft') keys.left = false;
+            if (e.code === 'ArrowRight') keys.right = false;
+            if (e.code === 'ArrowUp' || e.code === 'Space') keys.jump = false;
+            if (e.code === 'KeyE') keys.skill = false;
+            if (e.code === 'KeyQ') keys.qSkill = false;
+            if (e.code === 'ShiftLeft') keys.rSkill = false;
+        });
+
+        function initGameLoop() {
+            gameInterval = setInterval(() => {
+                socket.emit('player-input', keys);
+                if (keys.skill) keys.skill = false;
+                if (keys.qSkill) keys.qSkill = false;
+                if (keys.rSkill) keys.rSkill = false;
+            }, 1000 / 60);
+        }
+
+        socket.on('game-update', (state) => {
+            ctx.save();
+            
+            if (state.screenShake > 0) {
+                const shakeX = (Math.random() - 0.5) * state.screenShake * 1.5;
+                const shakeY = (Math.random() - 0.5) * state.screenShake * 1.5;
+                ctx.translate(shakeX, shakeY);
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, 340);
+            ctx.lineTo(800, 340);
+            ctx.stroke();
+
+            if (state.projectiles) {
+                state.projectiles.forEach(proj => {
+                    ctx.fillStyle = proj.color || '#00bcd4';
+                    ctx.beginPath();
+                    ctx.arc(proj.x, proj.y, proj.life !== undefined ? 3 : 6, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            }
+
+            for (let id in state.players) {
+                const p = state.players[id];
+
+                if (p.isDead) {
+                    ctx.fillStyle = '#777';
+                    ctx.fillRect(p.x + 5, p.y + 10, 30, 30);
+                    ctx.fillStyle = '#ff5722';
+                    ctx.font = '12px Arial';
+                    ctx.fillText('R.I.P', p.x + 5, p.y - 5);
+                } else {
+                    let imgKey = p.char;
+                    if (p.char === '김도현' && p.hasUsedAwaken) {
+                        imgKey = '김도현_각성';
+                    }
+                    const img = charImages[imgKey];
+                    
+                    if (img && img.complete && img.naturalWidth !== 0) {
+                        ctx.drawImage(img, p.x, p.y, p.width, p.height);
+                    } else {
+                        ctx.fillStyle = (id === socket.id) ? '#4CAF50' : '#f44336';
+                        ctx.fillRect(p.x, p.y, p.width, p.height);
+                    }
+
+                    if (p.isAttacking) {
+                        ctx.fillStyle = '#ffeb3b';
+                        const punchX = p.facing === 'right' ? p.x + p.width : p.x - 30;
+                        ctx.fillRect(punchX, p.y + (p.height / 2) - 15, 30, 30);
+                    }
+
+                    ctx.fillStyle = '#fff';
+                    ctx.font = '14px Arial';
+                    ctx.fillText(`${p.char} (HP: ${Math.round(p.hp)}/${p.maxHp})`, p.x - 10, p.y - 15);
+
+                    if (p.dialogue && p.dialogueTimer > 0) {
+                        ctx.fillStyle = '#ffeb3b';
+                        ctx.font = 'bold 14px Arial';
+                        ctx.fillText(p.dialogue, p.x - 10, p.y - 32);
+                    }
+                }
+            }
+
+            ctx.restore();
+        });
+
+        socket.on('game-over', (data) => {
+            clearInterval(gameInterval);
+            gameRoom.classList.add('hidden');
+            resultScreen.classList.remove('hidden');
+
+            if (data.winner === socket.id) {
+                resultTitle.innerText = 'WIN';
+                resultTitle.className = 'win-text';
+            } else {
+                resultTitle.innerText = 'FAIL';
+                resultTitle.className = 'fail-text';
+            }
+        });
+
+        backToLobbyBtn.addEventListener('click', () => {
+            resultScreen.classList.add('hidden');
+            lobby.classList.remove('hidden');
+            roomInput.value = '';
+            selectedCharacter = null;
+            
+            readyBtn.classList.add('hidden');
+            readyBtn.disabled = false;
+            readyBtn.innerText = '준비하기!';
+            confirmCharBtn.disabled = true;
+            charCards.forEach(c => {
+                c.classList.remove('selected');
+                c.style.pointerEvents = 'auto';
+            });
+            charStatusText.innerText = '';
+        });
+    </script>
+</body>
+</html>
