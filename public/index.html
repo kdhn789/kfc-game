@@ -202,21 +202,24 @@
     <!-- 터치 패널 위치 설정 토글 버튼 -->
     <button id="touchSettingsBtn">터치 조작 위치 설정</button>
 
-    <!-- 1. 방 입장 화면 -->
+    <!-- 1. 방 입장 및 찐따플레이(싱글) 시작 화면 -->
     <div id="lobby" class="box">
         <h1>KFC 대기실</h1>
-        <p>싱글 플레이 모드 (혼자서도 연습 및 게임 시작 가능)</p>
+        <p>멀티플레이를 위해 호실 번호를 입력하거나, 혼자서 찐따플레이를 시작하세요.</p>
         <input type="text" id="roomInput" placeholder="예: 523" maxlength="3">
         <br>
-        <button id="joinBtn">호실 들어가기</button>
+        <button id="joinBtn">호실 들어가기 (멀티)</button>
+        
+        <!-- 호실 번호 쓰는 칸 바로 아래에 추가된 찐따플레이(싱글) 버튼 영역 -->
+        <div style="margin-top: 15px; border-top: 1px solid #555; padding-top: 15px;">
+            <button id="jjintaPlayBtn" style="background: #ff9800; color: #000; border: none; border-radius: 5px; padding: 12px 20px; font-size: 16px; font-weight: bold; cursor: pointer;">찐따플레이 시작하기 (혼자 하기)</button>
+        </div>
     </div>
 
-    <!-- 2. 대기실 화면 (싱글 즉시 시작 및 2인 대기 겸용) -->
+    <!-- 2. 대기실 화면 (멀티용) -->
     <div id="waitingRoom" class="box hidden">
         <h1>호실 번호: <span id="displayRoomCode"></span></h1>
-        <p id="statusText">혼자서 연습하거나 상대를 기다릴 수 있습니다.</p>
-        <br>
-        <button id="startSingleBtn" style="background: #4CAF50; color: white; border: none; border-radius: 5px; padding: 12px 20px; font-size: 16px; font-weight: bold; cursor: pointer;">혼자서 바로 시작하기</button>
+        <p id="statusText">상대를 기다리는 중입니다...</p>
     </div>
 
     <!-- 3. 부고아 선택 화면 -->
@@ -309,9 +312,9 @@
 
         const roomInput = document.getElementById('roomInput');
         const joinBtn = document.getElementById('joinBtn');
+        const jjintaPlayBtn = document.getElementById('jjintaPlayBtn');
         const displayRoomCode = document.getElementById('displayRoomCode');
         const statusText = document.getElementById('statusText');
-        const startSingleBtn = document.getElementById('startSingleBtn');
 
         const charCards = document.querySelectorAll('.char-card');
         const confirmCharBtn = document.getElementById('confirmCharBtn');
@@ -495,13 +498,14 @@
             if (e.key === 'Enter') enterRoom();
         });
 
-        // 싱글/멀티 공용 대기실 화면 이벤트
-        socket.on('update-room', (count) => {
-            statusText.innerText = `현재 호실 인원: ${count명} (상대를 기다리거나 혼자 바로 시작할 수 있습니다)`;
+        // 호실 번호 입력창 아래의 '찐따플레이 시작하기 (혼자 하기)' 버튼 이벤트
+        jjintaPlayBtn.addEventListener('click', () => {
+            lobby.classList.add('hidden');
+            socket.emit('start-single-play');
         });
 
-        startSingleBtn.addEventListener('click', () => {
-            socket.emit('start-single-play');
+        socket.on('update-room', (count) => {
+            statusText.innerText = `현재 호실 인원: ${count명} (상대를 기다리는 중...)`;
         });
 
         socket.on('start-character-select', () => {
