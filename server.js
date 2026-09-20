@@ -168,6 +168,7 @@ io.on('connection', (socket) => {
             p.maxHp = stat.hp;
             p.speed = stat.speed;
             p.jumpPower = stat.jumpPower;
+            p.image = stat.image; //
             p.skillLogic = stat.onQSkill;
             p.rSkillLogic = stat.onRSkill;
             if (stat.meleeDamage) p.meleeDamage = stat.meleeDamage;
