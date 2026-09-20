@@ -132,8 +132,11 @@ io.on('connection', (socket) => {
         };
 
         io.to(roomCode).emit('update-room', Object.keys(room.players).length);
+        
+        // 인원이 2명이 되면 양쪽 모두에게 준비 단계 시작 알림
         if (Object.keys(room.players).length === 2) {
             io.to(roomCode).emit('start-ready-phase');
+            io.to(roomCode).emit('start-character-select'); // 대기 시간 없이 바로 캐릭터 선택으로 유도
         }
     });
 
@@ -175,7 +178,7 @@ io.on('connection', (socket) => {
             p.rReleaseLogic = stat.onRRelease; 
             if (stat.meleeDamage) p.meleeDamage = stat.meleeDamage;
 
-            // 특성 스케일 적용 (기본 1.5배 크기)
+            // 특성 스케일 적용 (김도현 기본 1.5배 크기 반영)
             const scale = stat.scale || 1.0;
             p.width = 40 * scale;
             p.height = 40 * scale;
@@ -195,7 +198,6 @@ io.on('connection', (socket) => {
         if (allSelected && room.status !== 'playing' && room.status !== 'waiting_countdown') {
             room.status = 'waiting_countdown'; 
             
-            // 클라이언트에 게임 시작 카운트다운 신호 전송
             io.to(roomCode).emit('start-countdown', room.players);
             
             setTimeout(() => {
@@ -266,13 +268,12 @@ io.on('connection', (socket) => {
             p.skillLogic(p, rooms[roomCode], socket.id);
         }
 
-        // R(쉬프트) 스킬 처리: 누르고 있을 때 vs 뗄 때
+        // R(쉬프트) 스킬 처리: 누르고 있을 때 자숙, 뗄 때 해제
         if (keys.rSkill) {
             if (p.rSkillLogic) {
                 p.rSkillLogic(p, rooms[roomCode], socket.id);
             }
         } else {
-            // 키를 떼었을 때 자숙 해제
             if (p.rReleaseLogic) {
                 p.rReleaseLogic(p);
             }
@@ -330,14 +331,11 @@ function startGameLoop(roomCode) {
                             bot.vx = 0;
                         }
 
-                        // 봇 스킬 쿨타임 적용 (Q스킬: 4초 쿨타임, R스킬: 10초 쿨타임)
                         const now = Date.now();
                         const qCooldown = 4000;
                         const rCooldown = 10000;
-
                         const skillChance = diff === 'hard' ? 0.04 : 0.015;
                         
-                        // Q스킬 시도
                         if (bot.skillLogic && Math.random() < skillChance) {
                             if (!bot.lastQSkillTime || now - bot.lastQSkillTime >= qCooldown) {
                                 bot.skillLogic(bot, room, 'bot');
@@ -345,47 +343,11 @@ function startGameLoop(roomCode) {
                             }
                         }
 
-                        // R스킬 시도
                         if (bot.rSkillLogic && Math.random() < (skillChance * 0.7)) {
                             if (!bot.lastRSkillTime || now - bot.lastRSkillTime >= rCooldown) {
                                 bot.rSkillLogic(bot, room, 'bot');
                                 bot.lastRSkillTime = now;
                             }
-                        }
-
-                        const attackInterval = diff === 'hard' ? 35 : 60;
-                        if (distance <= 45 && bot.botTimer % attackInterval === 0) {
-                            bot.isAttacking = true;
-                            setTimeout(() => { bot.isAttacking = false; }, 200);
-
-                            const attackBox = {
-                                x: bot.facing === 'right' ? bot.x + bot.width : bot.x - 40,
-                                y: bot.y,
-                                width: 40,
-                                height: bot.height
-                            };
-
-                            if (attackBox.x < player.x + player.width &&
-                                attackBox.x + attackBox.width > player.x &&
-                                attackBox.y < player.y + player.height &&
-                                attackBox.y + player.height > player.y) {
-                                
-                                player.hp -= bot.meleeDamage;
-                                room.screenShake = 8;
-
-                                if (player.hp <= 0) {
-                                    player.hp = 0;
-                                    player.isDead = true;
-                                    room.status = 'ended';
-                                    io.to(roomCode).emit('game-over', { winner: 'bot' });
-                                }
-                            }
-                        }
-
-                        if (diff === 'hard' && bot.y >= 300 && Math.random() < 0.02) {
-                            bot.vy = bot.jumpPower;
-                        } else if (diff === 'normal' && bot.y >= 300 && Math.random() < 0.008) {
-                            bot.vy = bot.jumpPower;
                         }
                     } else {
                         bot.vx = 0;
@@ -398,6 +360,17 @@ function startGameLoop(roomCode) {
             for (let id in room.players) {
                 const p = room.players[id];
                 if (p.isDead) continue;
+
+                // 자숙 중일 때 체력 회복 로직 (0.5초마다 체력 3 회복)
+                if (p.isContemplating) {
+                    p.contemplateTimer = (p.contemplateTimer || 0) + 1;
+                    if (p.contemplateTimer >= 30) {
+                        p.contemplateTimer = 0;
+                        if (p.hp < p.maxHp) {
+                            p.hp = Math.min(p.maxHp, p.hp + 3);
+                        }
+                    }
+                }
 
                 if (p.dialogueTimer > 0) {
                     p.dialogueTimer--;
@@ -432,7 +405,7 @@ function startGameLoop(roomCode) {
                 if (p.x > 800 - p.width) p.x = 800 - p.width;
             }
 
-            // 플레이어끼리 충돌 처리 (2명이 있을 때만)
+            // 플레이어 간 충돌 처리
             if (playerIds.length === 2) {
                 const p1 = room.players[playerIds[0]];
                 const p2 = room.players[playerIds[1]];
@@ -441,40 +414,19 @@ function startGameLoop(roomCode) {
                     if (p1.x < p2.x + p2.width && p1.x + p1.width > p2.x &&
                         p1.y < p2.y + p2.height && p1.y + p1.height > p2.y) {
                         
-                        // 싱글플레이이거나 봇이 포함된 경우 위로 올라타는(밟기) 로직을 제외하고 좌우로만 밀어냄
-                        if (room.isSingle) {
-                            const overlapX = Math.min(p1.x + p1.width - p2.x, p2.x + p2.width - p1.x);
-                            if (p1.x < p2.x) {
-                                p1.x -= overlapX / 2;
-                                p2.x += overlapX / 2;
-                            } else {
-                                p1.x += overlapX / 2;
-                                p2.x -= overlapX / 2;
-                            }
+                        const overlapX = Math.min(p1.x + p1.width - p2.x, p2.x + p2.width - p1.x);
+                        if (p1.x < p2.x) {
+                            p1.x -= overlapX / 2;
+                            p2.x += overlapX / 2;
                         } else {
-                            // 기존 멀티플레이어 간 밟기 및 밀어내기 충돌 처리
-                            if (p1.vy > 0 && p1.y + p1.height - p1.vy <= p2.y + 15) {
-                                p1.y = p2.y - p1.height;
-                                p1.vy = 0;
-                            } else if (p2.vy > 0 && p2.y + p2.height - p2.vy <= p1.y + 15) {
-                                p2.y = p1.y - p2.height;
-                                p2.vy = 0;
-                            } else {
-                                const overlapX = Math.min(p1.x + p1.width - p2.x, p2.x + p2.width - p1.x);
-                                if (p1.x < p2.x) {
-                                    p1.x -= overlapX / 2;
-                                    p2.x += overlapX / 2;
-                                } else {
-                                    p1.x += overlapX / 2;
-                                    p2.x -= overlapX / 2;
-                                }
-                            }
+                            p1.x += overlapX / 2;
+                            p2.x -= overlapX / 2;
                         }
                     }
                 }
             }
 
-            // 투사체 이동 및 피격 판정
+            // 투사체(창 등) 이동 및 피격 판정
             for (let i = room.projectiles.length - 1; i >= 0; i--) {
                 const proj = room.projectiles[i];
                 
@@ -500,21 +452,18 @@ function startGameLoop(roomCode) {
                 for (let id in room.players) {
                     if (id !== proj.owner) {
                         const enemy = room.players[id];
-                        if (!enemy.isDead && proj.life === undefined &&
-                            proj.x > enemy.x && proj.x < enemy.x + enemy.width && 
-                            proj.y > enemy.y && proj.y < enemy.y + enemy.height) {
+                        // 창(isSpear) 투사체나 일반 투사체 모두 올바르게 판정하도록 수정
+                        if (!enemy.isDead &&
+                            proj.x < enemy.x + enemy.width &&
+                            proj.x + proj.width > enemy.x &&
+                            proj.y < enemy.y + enemy.height &&
+                            proj.y + proj.height > enemy.y) {
                             
                             if (!(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
-                                enemy.hp -= 6;
+                                enemy.hp -= (proj.isSpear ? 30 : 6); // 창 데미지 설정 (원하는 경우 조절 가능)
                             }
                             
                             room.screenShake = 6; 
-
-                            if (proj.color === '#ff4500' && !(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
-                                enemy.burnTicks = 6; 
-                                enemy.burnTimer = 0;
-                            }
-
                             room.projectiles.splice(i, 1);
 
                             if (enemy.hp <= 0 && !(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
