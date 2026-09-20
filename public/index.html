@@ -11,7 +11,7 @@
             color: #fff;
             margin: 0;
             padding-top: 20px;
-            touch-action: manipulation; /* 모바일에서 더블탭 확대 방지 */
+            touch-action: manipulation;
         }
         .box {
             background: #333;
@@ -46,6 +46,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            width: 100%;
         }
         #gameCanvas {
             background: #111;
@@ -55,9 +56,9 @@
             height: auto;
         }
 
-        /* 모바일 터치 패널 스타일 */
+        /* 모바일 터치 패널 스타일 (항상 flex로 동작하도록 수정) */
         #mobileControls {
-            display: none; /* 기본은 숨김 (모바일 화면에서 보이도록 조절 가능) */
+            display: flex; 
             width: 100%;
             max-width: 800px;
             margin-top: 15px;
@@ -103,13 +104,6 @@
         #resultTitle { font-size: 80px; font-weight: bold; margin-bottom: 20px; letter-spacing: 5px; }
         .win-text { color: #4CAF50; text-shadow: 0 0 20px #4CAF50; }
         .fail-text { color: #f44336; text-shadow: 0 0 20px #f44336; }
-
-        /* 화면이 작을 때(모바일) 터치 패널 무조건 표시 */
-        @media (max-width: 900px) {
-            #mobileControls {
-                display: flex;
-            }
-        }
     </style>
 </head>
 <body>
@@ -360,7 +354,6 @@
                 e.preventDefault();
                 if (isHold) keys[keyName] = false;
             });
-            // PC 마우스 테스트용 호환
             btn.addEventListener('mousedown', (e) => {
                 keys[keyName] = true;
             });
@@ -372,7 +365,7 @@
         bindTouchButton('btn-left', 'left', true);
         bindTouchButton('btn-right', 'right', true);
         bindTouchButton('btn-jump', 'jump', true);
-        bindTouchButton('btn-e', 'skill', false);     // 단발성 스킬은 서버로 전송 후 자동 해제
+        bindTouchButton('btn-e', 'skill', false);
         bindTouchButton('btn-q', 'qSkill', false);
         bindTouchButton('btn-r', 'rSkill', false);
 
