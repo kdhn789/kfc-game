@@ -9,7 +9,9 @@
             text-align: center;
             background-color: #222;
             color: #fff;
-            margin-top: 30px;
+            margin: 0;
+            padding-top: 20px;
+            touch-action: manipulation; /* 모바일에서 더블탭 확대 방지 */
         }
         .box {
             background: #333;
@@ -38,11 +40,56 @@
         }
         .char-card:hover { border-color: #ff9800; }
         .selected { border-color: #4CAF50 !important; background: #2e5c31; }
+        
+        #gameRoom {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
         #gameCanvas {
             background: #111;
             border: 4px solid #fff;
             box-shadow: 0 0 20px rgba(255,255,255,0.2);
+            max-width: 100%;
+            height: auto;
         }
+
+        /* 모바일 터치 패널 스타일 */
+        #mobileControls {
+            display: none; /* 기본은 숨김 (모바일 화면에서 보이도록 조절 가능) */
+            width: 100%;
+            max-width: 800px;
+            margin-top: 15px;
+            justify-content: space-between;
+            padding: 0 10px;
+            box-sizing: border-box;
+        }
+        .control-group {
+            display: flex;
+            gap: 10px;
+        }
+        .touch-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid #fff;
+            border-radius: 12px;
+            font-size: 20px;
+            font-weight: bold;
+            width: 65px;
+            height: 65px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+        .touch-btn:active {
+            background: rgba(255, 255, 255, 0.5);
+        }
+        #btn-r { background: rgba(244, 67, 54, 0.4); border-color: #f44336; }
+
         #resultScreen {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -56,6 +103,13 @@
         #resultTitle { font-size: 80px; font-weight: bold; margin-bottom: 20px; letter-spacing: 5px; }
         .win-text { color: #4CAF50; text-shadow: 0 0 20px #4CAF50; }
         .fail-text { color: #f44336; text-shadow: 0 0 20px #f44336; }
+
+        /* 화면이 작을 때(모바일) 터치 패널 무조건 표시 */
+        @media (max-width: 900px) {
+            #mobileControls {
+                display: flex;
+            }
+        }
     </style>
 </head>
 <body>
@@ -114,6 +168,20 @@
     <div id="gameRoom" class="hidden">
         <h2>조작: 방향키(이동/점프) | E키(타격) | Q키(특수) | Shift키(궁극기)</h2>
         <canvas id="gameCanvas" width="800" height="400"></canvas>
+        
+        <!-- 모바일 터치 조작 버튼 패널 -->
+        <div id="mobileControls">
+            <div class="control-group">
+                <button class="touch-btn" id="btn-left">◀</button>
+                <button class="touch-btn" id="btn-right">▶</button>
+                <button class="touch-btn" id="btn-jump">▲</button>
+            </div>
+            <div class="control-group">
+                <button class="touch-btn" id="btn-e">E</button>
+                <button class="touch-btn" id="btn-q">Q</button>
+                <button class="touch-btn" id="btn-r">Shift</button>
+            </div>
+        </div>
     </div>
 
     <!-- 6. 승리/패배 결과 화면 -->
@@ -253,6 +321,7 @@
             }, 1000);
         });
 
+        // 키보드 이벤트
         window.addEventListener('keydown', (e) => {
             if (gameRoom.classList.contains('hidden')) return;
 
@@ -277,6 +346,35 @@
             if (e.code === 'KeyQ') keys.qSkill = false;
             if (e.code === 'ShiftLeft') keys.rSkill = false;
         });
+
+        // 모바일 터치 버튼 이벤트 연결
+        function bindTouchButton(id, keyName, isHold = true) {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                keys[keyName] = true;
+            });
+            btn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                if (isHold) keys[keyName] = false;
+            });
+            // PC 마우스 테스트용 호환
+            btn.addEventListener('mousedown', (e) => {
+                keys[keyName] = true;
+            });
+            btn.addEventListener('mouseup', (e) => {
+                if (isHold) keys[keyName] = false;
+            });
+        }
+
+        bindTouchButton('btn-left', 'left', true);
+        bindTouchButton('btn-right', 'right', true);
+        bindTouchButton('btn-jump', 'jump', true);
+        bindTouchButton('btn-e', 'skill', false);     // 단발성 스킬은 서버로 전송 후 자동 해제
+        bindTouchButton('btn-q', 'qSkill', false);
+        bindTouchButton('btn-r', 'rSkill', false);
 
         function initGameLoop() {
             gameInterval = setInterval(() => {
