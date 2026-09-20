@@ -13,6 +13,8 @@
             padding-top: 20px;
             touch-action: manipulation;
             overflow-x: hidden;
+            user-select: none;
+            -webkit-user-select: none;
         }
         .box {
             background: #333;
@@ -58,8 +60,8 @@
             height: auto;
         }
 
-        /* 상단 키 설정 버튼 스타일 */
-        #settingsBtn {
+        /* 터치 패널 위치 설정 버튼 */
+        #touchSettingsBtn {
             position: fixed;
             top: 15px;
             right: 15px;
@@ -73,71 +75,45 @@
             cursor: pointer;
             z-index: 50;
         }
-        #settingsBtn:hover { background: #555; }
+        #touchSettingsBtn:hover { background: #555; }
+        #touchSettingsBtn.active { background: #ff9800; border-color: #ff9800; }
 
-        /* 키 설정 모달 팝업 스타일 */
-        #settingsModal {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 200;
-        }
-        .modal-content {
-            background: #2a2a2a;
-            padding: 30px;
-            border-radius: 12px;
-            border: 2px solid #555;
-            width: 320px;
-            text-align: left;
-        }
-        .key-config-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-            font-size: 16px;
-        }
-        .key-config-btn {
-            background: #444;
-            color: #ffeb3b;
-            border: 1px solid #777;
-            padding: 6px 14px;
-            border-radius: 6px;
-            font-weight: bold;
-            cursor: pointer;
-            min-width: 70px;
-            text-align: center;
-        }
-        .key-config-btn.listening {
-            background: #f44336;
-            color: white;
-            animation: blink 0.8s infinite alternate;
-        }
-        @keyframes blink {
-            from { opacity: 1; }
-            to { opacity: 0.4; }
-        }
-
-        /* 모바일 터치 조작 패널 (화면 양끝 배치 & 대형 사이즈) */
+        /* 터치 조작 패널 컨테이너 (자유 이동 가능) */
         #mobileControls {
-            display: flex;
+            position: absolute;
+            bottom: 20px;
+            left: 0;
             width: 100%;
-            max-width: 800px;
-            margin-top: 15px;
+            display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0 10px;
+            padding: 0 20px;
             box-sizing: border-box;
+            cursor: grab;
+        }
+        #mobileControls.customizing {
+            border: 2px dashed #ff9800;
+            background: rgba(255, 152, 0, 0.1);
+            cursor: move;
+        }
+        #mobileControls.customizing::before {
+            content: "터치 패널을 드래그해서 위치를 조절하세요 (버튼을 눌러 완료)";
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ff9800;
+            color: #000;
+            font-weight: bold;
+            padding: 3px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
         }
 
         #joystickArea {
             display: flex;
             gap: 15px;
-            user-select: none;
-            -webkit-user-select: none;
         }
 
         .joystick-btn {
@@ -161,8 +137,6 @@
             grid-template-columns: repeat(2, 75px);
             grid-template-rows: repeat(2, 75px);
             gap: 12px;
-            user-select: none;
-            -webkit-user-select: none;
         }
 
         .action-btn {
@@ -197,45 +171,8 @@
 </head>
 <body>
 
-    <!-- 키 설정 열기 버튼 -->
-    <button id="settingsBtn">⚙️ 조작키 설정</button>
-
-    <!-- 키 설정 모달 창 -->
-    <div id="settingsModal" class="hidden">
-        <div class="modal-content">
-            <h3>키보드 조작 설정</h3>
-            <p style="font-size: 13px; color: #aaa; margin-bottom: 15px;">버튼을 누르고 원하는 키를 입력하세요.</p>
-            
-            <div class="key-config-row">
-                <span>왼쪽 이동</span>
-                <button class="key-config-btn" data-action="left" id="bind-left">ArrowLeft</button>
-            </div>
-            <div class="key-config-row">
-                <span>오른쪽 이동</span>
-                <button class="key-config-btn" data-action="right" id="bind-right">ArrowRight</button>
-            </div>
-            <div class="key-config-row">
-                <span>점프</span>
-                <button class="key-config-btn" data-action="jump" id="bind-jump">ArrowUp</button>
-            </div>
-            <div class="key-config-row">
-                <span>타격 (기본)</span>
-                <button class="key-config-btn" data-action="skill" id="bind-skill">KeyE</button>
-            </div>
-            <div class="key-config-row">
-                <span>특수 (Q)</span>
-                <button class="key-config-btn" data-action="qSkill" id="bind-qSkill">KeyQ</button>
-            </div>
-            <div class="key-config-row">
-                <span>궁극기 (Shift)</span>
-                <button class="key-config-btn" data-action="rSkill" id="bind-rSkill">ShiftLeft</button>
-            </div>
-
-            <div style="text-align: right; margin-top: 20px;">
-                <button id="closeModalBtn" style="background: #4CAF50; border: none; color: white; padding: 8px 16px; border-radius: 5px; font-weight: bold;">완료</button>
-            </div>
-        </div>
-    </div>
+    <!-- 터치 패널 위치 설정 토글 버튼 -->
+    <button id="touchSettingsBtn">터치 조작 위치 설정</button>
 
     <!-- 1. 방 입장 화면 -->
     <div id="lobby" class="box">
@@ -289,10 +226,10 @@
 
     <!-- 5. 실제 게임 화면 -->
     <div id="gameRoom" class="hidden">
-        <h2>설정된 조작키로 대결하세요!</h2>
+        <h2>조작키로 대결하세요!</h2>
         <canvas id="gameCanvas" width="800" height="400"></canvas>
         
-        <!-- 모바일 터치 조작 패널 -->
+        <!-- 모바일 터치 조작 패널 (드래그하여 위치 변경 가능) -->
         <div id="mobileControls">
             <div id="joystickArea">
                 <button class="joystick-btn" id="btn-left">◀</button>
@@ -360,75 +297,99 @@
         let keys = { left: false, right: false, jump: false, skill: false, qSkill: false, rSkill: false };
         let gameInterval = null;
 
-        // 기본 키 설정 및 로컬스토리지 불러오기
-        let keyBinds = {
-            left: 'ArrowLeft',
-            right: 'ArrowRight',
-            jump: 'ArrowUp',
-            skill: 'KeyE',
-            qSkill: 'KeyQ',
-            rSkill: 'ShiftLeft'
-        };
+        // 터치 패널 위치 커스텀 및 로컬스토리지 복원
+        const mobileControls = document.getElementById('mobileControls');
+        const touchSettingsBtn = document.getElementById('touchSettingsBtn');
+        let isCustomizing = false;
 
-        const savedBinds = localStorage.getItem('kfc_keybinds');
-        if (savedBinds) {
-            try { keyBinds = JSON.parse(savedBinds); } catch(e) {}
+        const savedPos = localStorage.getItem('kfc_touch_pos');
+        if (savedPos) {
+            try {
+                const pos = JSON.parse(savedPos);
+                mobileControls.style.bottom = pos.bottom;
+                mobileControls.style.left = pos.left;
+                mobileControls.style.transform = pos.transform || 'none';
+            } catch(e) {}
         }
 
-        // 설정 UI 반영 함수
-        function updateKeyBindUI() {
-            for (let action in keyBinds) {
-                const btn = document.getElementById(`bind-${action}`);
-                if (btn) btn.innerText = keyBinds[action];
+        touchSettingsBtn.addEventListener('click', () => {
+            isCustomizing = !isCustomizing;
+            if (isCustomizing) {
+                touchSettingsBtn.innerText = '💾 위치 저장 완료';
+                touchSettingsBtn.classList.add('active');
+                mobileControls.classList.add('customizing');
+            } else {
+                touchSettingsBtn.innerText = '🖐️ 터치 조작 위치 설정';
+                touchSettingsBtn.classList.remove('active');
+                mobileControls.classList.remove('customizing');
+                
+                // 저장
+                localStorage.setItem('kfc_touch_pos', JSON.stringify({
+                    bottom: mobileControls.style.bottom,
+                    left: mobileControls.style.left,
+                    transform: mobileControls.style.transform
+                }));
             }
-        }
-        updateKeyBindUI();
-
-        // 키 설정 모달 제어
-        const settingsBtn = document.getElementById('settingsBtn');
-        const settingsModal = document.getElementById('settingsModal');
-        const closeModalBtn = document.getElementById('closeModalBtn');
-
-        settingsBtn.addEventListener('click', () => {
-            settingsModal.classList.remove('hidden');
         });
 
-        closeModalBtn.addEventListener('click', () => {
-            settingsModal.classList.add('hidden');
-            localStorage.setItem('kfc_keybinds', JSON.stringify(keyBinds));
+        // 드래그(마우스 및 터치)로 패널 위치 이동 구현
+        let isDragging = false;
+        let dragStartX = 0, dragStartY = 0;
+
+        mobileControls.addEventListener('mousedown', (e) => {
+            if (!isCustomizing) return;
+            isDragging = true;
+            dragStartX = e.clientX - mobileControls.offsetLeft;
+            dragStartY = e.clientY - mobileControls.offsetTop;
         });
 
-        // 개별 키 재할당 로직
-        let listeningAction = null;
-        document.querySelectorAll('.key-config-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                document.querySelectorAll('.key-config-btn').forEach(b => b.classList.remove('listening'));
-                listeningAction = btn.getAttribute('data-action');
-                btn.classList.add('listening');
-                btn.innerText = '키 입력 대기중...';
-            });
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging || !isCustomizing) return;
+            const newLeft = e.clientX - dragStartX;
+            const newTop = e.clientY - dragStartY;
+            mobileControls.style.left = `${newLeft}px`;
+            mobileControls.style.top = `${newTop}px`;
+            mobileControls.style.bottom = 'auto';
+            mobileControls.style.transform = 'none';
         });
 
+        window.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        // 모바일 터치 드래그 지원
+        mobileControls.addEventListener('touchstart', (e) => {
+            if (!isCustomizing) return;
+            isDragging = true;
+            const touch = e.touches[0];
+            dragStartX = touch.clientX - mobileControls.offsetLeft;
+            dragStartY = touch.clientY - mobileControls.offsetTop;
+        });
+
+        window.addEventListener('touchmove', (e) => {
+            if (!isDragging || !isCustomizing) return;
+            const touch = e.touches[0];
+            const newLeft = touch.clientX - dragStartX;
+            const newTop = touch.clientY - dragStartY;
+            mobileControls.style.left = `${newLeft}px`;
+            mobileControls.style.top = `${newTop}px`;
+            mobileControls.style.bottom = 'auto';
+            mobileControls.style.transform = 'none';
+        });
+
+        window.addEventListener('touchend', () => {
+            isDragging = false;
+        });
+
+        // 기본 키보드 조작
         window.addEventListener('keydown', (e) => {
-            if (listeningAction) {
-                e.preventDefault();
-                // 사용자가 누른 키 값 저장 (e.code 기준: 예 'KeyA', 'ArrowLeft', 'Space' 등)
-                keyBinds[listeningAction] = e.code;
-                listeningAction = null;
-                updateKeyBindUI();
-                document.querySelectorAll('.key-config-btn').forEach(b => b.classList.remove('listening'));
-                return;
-            }
-
             if (gameRoom.classList.contains('hidden')) return;
-
-            // 설정된 키와 매칭하여 입력 처리
-            if (e.code === keyBinds.left) keys.left = true;
-            if (e.code === keyBinds.right) keys.right = true;
-            if (e.code === keyBinds.jump) keys.jump = true;
-            if (e.code === keyBinds.skill) keys.skill = true;
-            if (e.code === keyBinds.qSkill) keys.qSkill = true;
-            if (e.code === keyBinds.rSkill) {
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
+            if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') keys.jump = true;
+            if (e.code === 'KeyE') keys.skill = true;
+            if (e.code === 'KeyQ') keys.qSkill = true;
+            if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
                 e.preventDefault();
                 keys.rSkill = true;
             }
@@ -436,32 +397,35 @@
 
         window.addEventListener('keyup', (e) => {
             if (gameRoom.classList.contains('hidden')) return;
-
-            if (e.code === keyBinds.left) keys.left = false;
-            if (e.code === keyBinds.right) keys.right = false;
-            if (e.code === keyBinds.jump) keys.jump = false;
-            if (e.code === keyBinds.skill) keys.skill = false;
-            if (e.code === keyBinds.qSkill) keys.qSkill = false;
-            if (e.code === keyBinds.rSkill) keys.rSkill = false;
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
+            if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') keys.jump = false;
+            if (e.code === 'KeyE') keys.skill = false;
+            if (e.code === 'KeyQ') keys.qSkill = false;
+            if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') keys.rSkill = false;
         });
 
-        // 모바일 터치 버튼 이벤트 연결
+        // 터치 버튼 이벤트 연결
         function bindTouchButton(id, keyName, isHold = true) {
             const btn = document.getElementById(id);
             if (!btn) return;
 
             btn.addEventListener('touchstart', (e) => {
+                if (isCustomizing) return;
                 e.preventDefault();
                 keys[keyName] = true;
             });
             btn.addEventListener('touchend', (e) => {
+                if (isCustomizing) return;
                 e.preventDefault();
                 if (isHold) keys[keyName] = false;
             });
             btn.addEventListener('mousedown', (e) => {
+                if (isCustomizing) return;
                 keys[keyName] = true;
             });
             btn.addEventListener('mouseup', (e) => {
+                if (isCustomizing) return;
                 if (isHold) keys[keyName] = false;
             });
         }
