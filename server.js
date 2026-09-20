@@ -181,21 +181,21 @@ io.on('connection', (socket) => {
             p.height = 40 * scale;
         }
         
-        // [수정된 부분] 싱글플레이 또는 멀티플레이어 모두 캐릭터 선택 여부 정확히 확인
+        // 두 플레이어가 모두 캐릭터를 골랐는지 확인
+        const playerEntries = Object.values(room.players);
         let allSelected = false;
 
         if (room.isSingle) {
             allSelected = true;
-        } else {
-            const playerEntries = Object.values(room.players);
-            // 2명이 모두 접속해 있고, 둘 다 캐릭터를 골랐는지 확인
-            if (playerEntries.length === 2) {
-                allSelected = playerEntries.every(player => player.char !== null);
-            }
+        } else if (playerEntries.length === 2) {
+            allSelected = playerEntries.every(player => player.char !== null);
         }
 
+        // 둘 다 골랐고 아직 게임 시작 전이라면 카운트다운 및 게임 루프 시작
         if (allSelected && room.status !== 'playing' && room.status !== 'waiting_countdown') {
             room.status = 'waiting_countdown'; 
+            
+            // 클라이언트에 게임 시작 카운트다운 신호 전송
             io.to(roomCode).emit('start-countdown', room.players);
             
             setTimeout(() => {
@@ -207,7 +207,7 @@ io.on('connection', (socket) => {
             startGameLoop(roomCode);
         }
     });
-    
+
     socket.on('player-input', (keys) => {
         const roomCode = socket.roomCode;
         if (!rooms[roomCode] || rooms[roomCode].status !== 'playing') return;
