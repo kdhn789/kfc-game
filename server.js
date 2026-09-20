@@ -178,15 +178,23 @@ io.on('connection', (socket) => {
         const allSelected = room.isSingle ? true : Object.values(room.room?.players || room.players).every(player => player.char !== null);
 
         if (allSelected && room.status !== 'playing') {
-            room.status = 'playing'; // 게임 시작 상태로 변경
+            room.status = 'waiting_countdown'; // 카운트다운 대기 상태로 설정
             io.to(roomCode).emit('start-countdown', room.players);
+            
+            // 3초 카운트다운 후에 'playing' 상태로 전환하여 조작 및 이동 가능하게 변경
+            setTimeout(() => {
+                if (rooms[roomCode]) {
+                    rooms[roomCode].status = 'playing';
+                }
+            }, 3000);
+
             startGameLoop(roomCode);
         }
     });
 
     socket.on('player-input', (keys) => {
         const roomCode = socket.roomCode;
-        if (!rooms[roomCode] || rooms[roomCode].status !== 'playing') return;
+        if (!rooms[roomCode] || rooms[roomCode].status !== 'playing') return; // 카운트다운 중에는 입력 무시
         const p = rooms[roomCode].players[socket.id];
         if (!p || p.isDead) return;
 
@@ -266,204 +274,207 @@ function startGameLoop(roomCode) {
     if (room.gameInterval) clearInterval(room.gameInterval);
 
     room.gameInterval = setInterval(() => {
-        if (!rooms[roomCode] || rooms[roomCode].status !== 'playing') {
+        if (!rooms[roomCode] || rooms[roomCode].status === 'ended') {
             clearInterval(room.gameInterval);
             return;
         }
 
         if (room.screenShake > 0) room.screenShake--;
 
-        // 싱글플레이 봇 AI 로직 처리 (status가 'playing'일 때만 작동하여 대기 3초간 멈춰있음)
-        if (room.isSingle && room.players['bot'] && room.status === 'playing') {
-            const bot = room.players['bot'];
-            const playerSocketId = Object.keys(room.players).find(id => id !== 'bot');
-            const player = room.players[playerSocketId];
+        // 게임 상태가 'playing'일 때만 물리 연산 및 봇/투사체 이동 진행 (3초 카운트다운 동안은 멈춤)
+        if (room.status === 'playing') {
+            // 싱글플레이 봇 AI 로직 처리
+            if (room.isSingle && room.players['bot']) {
+                const bot = room.players['bot'];
+                const playerSocketId = Object.keys(room.players).find(id => id !== 'bot');
+                const player = room.players[playerSocketId];
 
-            if (!bot.isDead && player && !player.isDead) {
-                const diff = room.botDifficulty;
-                if (diff !== 'sandbag') {
-                    bot.botTimer++;
-                    const dx = player.x - bot.x;
-                    const distance = Math.abs(dx);
-                    
-                    let moveSpeed = bot.speed * 0.75;
-                    if (diff === 'easy') moveSpeed *= 0.5;
-                    if (diff === 'hard') moveSpeed *= 1.0;
+                if (!bot.isDead && player && !player.isDead) {
+                    const diff = room.botDifficulty;
+                    if (diff !== 'sandbag') {
+                        bot.botTimer++;
+                        const dx = player.x - bot.x;
+                        const distance = Math.abs(dx);
+                        
+                        let moveSpeed = bot.speed * 0.75;
+                        if (diff === 'easy') moveSpeed *= 0.5;
+                        if (diff === 'hard') moveSpeed *= 1.0;
 
-                    if (distance > 35) {
-                        bot.vx = dx > 0 ? moveSpeed : -moveSpeed;
-                        bot.facing = dx > 0 ? 'right' : 'left';
+                        if (distance > 35) {
+                            bot.vx = dx > 0 ? moveSpeed : -moveSpeed;
+                            bot.facing = dx > 0 ? 'right' : 'left';
+                        } else {
+                            bot.vx = 0;
+                        }
+
+                        // Q스킬 및 R스킬 사용 확률적 판단
+                        const skillChance = diff === 'hard' ? 0.04 : 0.015;
+                        if (bot.skillLogic && Math.random() < skillChance) {
+                            bot.skillLogic(bot, room, 'bot');
+                        }
+                        if (bot.rSkillLogic && Math.random() < (skillChance * 0.7)) {
+                            bot.rSkillLogic(bot, room, 'bot');
+                        }
+
+                        const attackInterval = diff === 'hard' ? 35 : 60;
+                        if (distance <= 45 && bot.botTimer % attackInterval === 0) {
+                            bot.isAttacking = true;
+                            setTimeout(() => { bot.isAttacking = false; }, 200);
+
+                            const attackBox = {
+                                x: bot.facing === 'right' ? bot.x + bot.width : bot.x - 40,
+                                y: bot.y,
+                                width: 40,
+                                height: bot.height
+                            };
+
+                            if (attackBox.x < player.x + player.width &&
+                                attackBox.x + attackBox.width > player.x &&
+                                attackBox.y < player.y + player.height &&
+                                attackBox.y + player.height > player.y) {
+                                
+                                player.hp -= bot.meleeDamage;
+                                room.screenShake = 8;
+
+                                if (player.hp <= 0) {
+                                    player.hp = 0;
+                                    player.isDead = true;
+                                    room.status = 'ended';
+                                    io.to(roomCode).emit('game-over', { winner: 'bot' });
+                                }
+                            }
+                        }
+
+                        if (diff === 'hard' && bot.y >= 300 && Math.random() < 0.02) {
+                            bot.vy = bot.jumpPower;
+                        } else if (diff === 'normal' && bot.y >= 300 && Math.random() < 0.008) {
+                            bot.vy = bot.jumpPower;
+                        }
                     } else {
                         bot.vx = 0;
                     }
+                }
+            }
 
-                    // Q스킬 및 R스킬 사용 확률적 판단 (어려움 난이도가 더 자주 사용)
-                    const skillChance = diff === 'hard' ? 0.04 : 0.015;
-                    if (bot.skillLogic && Math.random() < skillChance) {
-                        bot.skillLogic(bot, room, 'bot');
+            const playerIds = Object.keys(room.players);
+
+            for (let id in room.players) {
+                const p = room.players[id];
+                if (p.isDead) continue;
+
+                if (p.dialogueTimer > 0) {
+                    p.dialogueTimer--;
+                    if (p.dialogueTimer === 0) p.dialogue = '';
+                }
+
+                if (p.burnTicks > 0) {
+                    p.burnTimer++;
+                    if (p.burnTimer >= 30) { 
+                        p.burnTimer = 0;
+                        p.hp -= 2; 
+                        p.burnTicks--;
+                        
+                        if (p.hp <= 0) {
+                            p.hp = 0;
+                            p.isDead = true;
+                            room.status = 'ended';
+                            const killerId = Object.keys(room.players).find(k => k !== id);
+                            io.to(roomCode).emit('game-over', { winner: killerId });
+                        }
                     }
-                    if (bot.rSkillLogic && Math.random() < (skillChance * 0.7)) {
-                        bot.rSkillLogic(bot, room, 'bot');
-                    }
+                }
 
-                    const attackInterval = diff === 'hard' ? 35 : 60;
-                    if (distance <= 45 && bot.botTimer % attackInterval === 0) {
-                        bot.isAttacking = true;
-                        setTimeout(() => { bot.isAttacking = false; }, 200);
+                p.vy += 0.6;
+                p.x += p.vx;
+                p.y += p.vy;
 
-                        const attackBox = {
-                            x: bot.facing === 'right' ? bot.x + bot.width : bot.x - 40,
-                            y: bot.y,
-                            width: 40,
-                            height: bot.height
-                        };
+                const floorY = 340 - p.height;
+                if (p.y >= floorY) { p.y = floorY; p.vy = 0; }
 
-                        if (attackBox.x < player.x + player.width &&
-                            attackBox.x + attackBox.width > player.x &&
-                            attackBox.y < player.y + player.height &&
-                            attackBox.y + player.height > player.y) {
-                            
-                            player.hp -= bot.meleeDamage;
-                            room.screenShake = 8;
+                if (p.x < 0) p.x = 0;
+                if (p.x > 800 - p.width) p.x = 800 - p.width;
+            }
 
-                            if (player.hp <= 0) {
-                                player.hp = 0;
-                                player.isDead = true;
-                                room.status = 'ended';
-                                io.to(roomCode).emit('game-over', { winner: 'bot' });
+            // 플레이어끼리 밟기 충돌 처리 (2명이 있을 때만)
+            if (playerIds.length === 2) {
+                const p1 = room.players[playerIds[0]];
+                const p2 = room.players[playerIds[1]];
+
+                if (!p1.isDead && !p2.isDead) {
+                    if (p1.x < p2.x + p2.width && p1.x + p1.width > p2.x &&
+                        p1.y < p2.y + p2.height && p1.y + p1.height > p2.y) {
+                        
+                        if (p1.vy > 0 && p1.y + p1.height - p1.vy <= p2.y + 15) {
+                            p1.y = p2.y - p1.height;
+                            p1.vy = 0;
+                        } else if (p2.vy > 0 && p2.y + p2.height - p2.vy <= p1.y + 15) {
+                            p2.y = p1.y - p2.height;
+                            p2.vy = 0;
+                        } else {
+                            const overlapX = Math.min(p1.x + p1.width - p2.x, p2.x + p2.width - p1.x);
+                            if (p1.x < p2.x) {
+                                p1.x -= overlapX / 2;
+                                p2.x += overlapX / 2;
+                            } else {
+                                p1.x += overlapX / 2;
+                                p2.x -= overlapX / 2;
                             }
                         }
                     }
-
-                    if (diff === 'hard' && bot.y >= 300 && Math.random() < 0.02) {
-                        bot.vy = bot.jumpPower;
-                    } else if (diff === 'normal' && bot.y >= 300 && Math.random() < 0.008) {
-                        bot.vy = bot.jumpPower;
-                    }
-                } else {
-                    bot.vx = 0;
-                }
-            }
-        }
-
-        const playerIds = Object.keys(room.players);
-
-        for (let id in room.players) {
-            const p = room.players[id];
-            if (p.isDead) continue;
-
-            if (p.dialogueTimer > 0) {
-                p.dialogueTimer--;
-                if (p.dialogueTimer === 0) p.dialogue = '';
-            }
-
-            if (p.burnTicks > 0) {
-                p.burnTimer++;
-                if (p.burnTimer >= 30) { 
-                    p.burnTimer = 0;
-                    p.hp -= 2; 
-                    p.burnTicks--;
-                    
-                    if (p.hp <= 0) {
-                        p.hp = 0;
-                        p.isDead = true;
-                        room.status = 'ended';
-                        const killerId = Object.keys(room.players).find(k => k !== id);
-                        io.to(roomCode).emit('game-over', { winner: killerId });
-                    }
                 }
             }
 
-            p.vy += 0.6;
-            p.x += p.vx;
-            p.y += p.vy;
+            // 투사체 이동 및 피격 판정
+            for (let i = room.projectiles.length - 1; i >= 0; i--) {
+                const proj = room.projectiles[i];
+                
+                proj.x += proj.vx;
+                proj.y += proj.vy;
+                if (proj.gravity) {
+                    proj.vy += proj.gravity;
+                }
 
-            const floorY = 340 - p.height;
-            if (p.y >= floorY) { p.y = floorY; p.vy = 0; }
-
-            if (p.x < 0) p.x = 0;
-            if (p.x > 800 - p.width) p.x = 800 - p.width;
-        }
-
-        // 플레이어끼리 밟기 충돌 처리 (2명이 있을 때만)
-        if (playerIds.length === 2) {
-            const p1 = room.players[playerIds[0]];
-            const p2 = room.players[playerIds[1]];
-
-            if (!p1.isDead && !p2.isDead) {
-                if (p1.x < p2.x + p2.width && p1.x + p1.width > p2.x &&
-                    p1.y < p2.y + p2.height && p1.y + p1.height > p2.y) {
-                    
-                    if (p1.vy > 0 && p1.y + p1.height - p1.vy <= p2.y + 15) {
-                        p1.y = p2.y - p1.height;
-                        p1.vy = 0;
-                    } else if (p2.vy > 0 && p2.y + p2.height - p2.vy <= p1.y + 15) {
-                        p2.y = p1.y - p2.height;
-                        p2.vy = 0;
-                    } else {
-                        const overlapX = Math.min(p1.x + p1.width - p2.x, p2.x + p2.width - p1.x);
-                        if (p1.x < p2.x) {
-                            p1.x -= overlapX / 2;
-                            p2.x += overlapX / 2;
-                        } else {
-                            p1.x += overlapX / 2;
-                            p2.x -= overlapX / 2;
-                        }
+                if (proj.life !== undefined) {
+                    proj.life--;
+                    if (proj.life <= 0) {
+                        room.projectiles.splice(i, 1);
+                        continue;
                     }
                 }
-            }
-        }
 
-        // 투사체 이동 및 피격 판정
-        for (let i = room.projectiles.length - 1; i >= 0; i--) {
-            const proj = room.projectiles[i];
-            
-            proj.x += proj.vx;
-            proj.y += proj.vy;
-            if (proj.gravity) {
-                proj.vy += proj.gravity;
-            }
-
-            if (proj.life !== undefined) {
-                proj.life--;
-                if (proj.life <= 0) {
+                if (proj.x < 0 || proj.x > 800 || proj.y < 0 || proj.y > 400) {
                     room.projectiles.splice(i, 1);
                     continue;
                 }
-            }
 
-            if (proj.x < 0 || proj.x > 800 || proj.y < 0 || proj.y > 400) {
-                room.projectiles.splice(i, 1);
-                continue;
-            }
+                for (let id in room.players) {
+                    if (id !== proj.owner) {
+                        const enemy = room.players[id];
+                        if (!enemy.isDead && proj.life === undefined &&
+                            proj.x > enemy.x && proj.x < enemy.x + enemy.width && 
+                            proj.y > enemy.y && proj.y < enemy.y + enemy.height) {
+                            
+                            if (!(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
+                                enemy.hp -= 6;
+                            }
+                            
+                            room.screenShake = 6; 
 
-            for (let id in room.players) {
-                if (id !== proj.owner) {
-                    const enemy = room.players[id];
-                    if (!enemy.isDead && proj.life === undefined &&
-                        proj.x > enemy.x && proj.x < enemy.x + enemy.width && 
-                        proj.y > enemy.y && proj.y < enemy.y + enemy.height) {
-                        
-                        if (!(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
-                            enemy.hp -= 6;
+                            if (proj.color === '#ff4500' && !(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
+                                enemy.burnTicks = 6; 
+                                enemy.burnTimer = 0;
+                            }
+
+                            room.projectiles.splice(i, 1);
+
+                            if (enemy.hp <= 0 && !(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
+                                enemy.hp = 0;
+                                enemy.isDead = true;
+                                room.status = 'ended';
+                                io.to(roomCode).emit('game-over', { winner: proj.owner });
+                            }
+                            break;
                         }
-                        
-                        room.screenShake = 6; 
-
-                        if (proj.color === '#ff4500' && !(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
-                            enemy.burnTicks = 6; 
-                            enemy.burnTimer = 0;
-                        }
-
-                        room.projectiles.splice(i, 1);
-
-                        if (enemy.hp <= 0 && !(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
-                            enemy.hp = 0;
-                            enemy.isDead = true;
-                            room.status = 'ended';
-                            io.to(roomCode).emit('game-over', { winner: proj.owner });
-                        }
-                        break;
                     }
                 }
             }
