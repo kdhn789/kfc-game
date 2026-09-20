@@ -77,6 +77,7 @@ io.on('connection', (socket) => {
             rSkillLogic: botStat.onRSkill || null,
             meleeDamage: botStat.meleeDamage || 10,
             hasUsedGrow: false, hasUsedAwaken: false, lastRangedTime: 0, lastRSkillTime: 0,
+            lastQSkillTime: 0, // 봇 Q스킬 쿨타임 기록용
             dialogue: '',       
             dialogueTimer: 0,
             burnTimer: 0, 
@@ -178,10 +179,9 @@ io.on('connection', (socket) => {
         const allSelected = room.isSingle ? true : Object.values(room.room?.players || room.players).every(player => player.char !== null);
 
         if (allSelected && room.status !== 'playing') {
-            room.status = 'waiting_countdown'; // 카운트다운 대기 상태로 설정
+            room.status = 'waiting_countdown'; 
             io.to(roomCode).emit('start-countdown', room.players);
             
-            // 3초 카운트다운 후에 'playing' 상태로 전환하여 조작 및 이동 가능하게 변경
             setTimeout(() => {
                 if (rooms[roomCode]) {
                     rooms[roomCode].status = 'playing';
@@ -194,7 +194,7 @@ io.on('connection', (socket) => {
 
     socket.on('player-input', (keys) => {
         const roomCode = socket.roomCode;
-        if (!rooms[roomCode] || rooms[roomCode].status !== 'playing') return; // 카운트다운 중에는 입력 무시
+        if (!rooms[roomCode] || rooms[roomCode].status !== 'playing') return;
         const p = rooms[roomCode].players[socket.id];
         if (!p || p.isDead) return;
 
@@ -281,7 +281,6 @@ function startGameLoop(roomCode) {
 
         if (room.screenShake > 0) room.screenShake--;
 
-        // 게임 상태가 'playing'일 때만 물리 연산 및 봇/투사체 이동 진행 (3초 카운트다운 동안은 멈춤)
         if (room.status === 'playing') {
             // 싱글플레이 봇 AI 로직 처리
             if (room.isSingle && room.players['bot']) {
@@ -307,13 +306,27 @@ function startGameLoop(roomCode) {
                             bot.vx = 0;
                         }
 
-                        // Q스킬 및 R스킬 사용 확률적 판단
+                        // 봇 스킬 쿨타임 적용 (Q스킬: 4초 쿨타임, R스킬: 10초 쿨타임)
+                        const now = Date.now();
+                        const qCooldown = 4000;
+                        const rCooldown = 10000;
+
                         const skillChance = diff === 'hard' ? 0.04 : 0.015;
+                        
+                        // Q스킬 시도
                         if (bot.skillLogic && Math.random() < skillChance) {
-                            bot.skillLogic(bot, room, 'bot');
+                            if (!bot.lastQSkillTime || now - bot.lastQSkillTime >= qCooldown) {
+                                bot.skillLogic(bot, room, 'bot');
+                                bot.lastQSkillTime = now;
+                            }
                         }
+
+                        // R스킬 시도
                         if (bot.rSkillLogic && Math.random() < (skillChance * 0.7)) {
-                            bot.rSkillLogic(bot, room, 'bot');
+                            if (!bot.lastRSkillTime || now - bot.lastRSkillTime >= rCooldown) {
+                                bot.rSkillLogic(bot, room, 'bot');
+                                bot.lastRSkillTime = now;
+                            }
                         }
 
                         const attackInterval = diff === 'hard' ? 35 : 60;
