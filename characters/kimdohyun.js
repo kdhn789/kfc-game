@@ -1,6 +1,6 @@
 module.exports = {
     name: '김도현',
-    hp: 220,
+    hp: 180,
     speed: 2.5,
     jumpPower: -5,
     meleeDamage: 50,

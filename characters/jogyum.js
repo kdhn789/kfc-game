@@ -1,9 +1,9 @@
 module.exports = {
     name: '조겸',
-    hp: 90,
+    hp: 120,
     speed: 8,
     jumpPower: -13,
-    meleeDamage: 10,
+    meleeDamage: 15,
     image: './images/jogyum.png',
     // Q 스킬: 대시
     onQSkill: (p) => {
