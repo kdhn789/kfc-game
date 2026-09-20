@@ -8,7 +8,7 @@ module.exports = {
     // Q 스킬: 우유 탄막 8방향 발사
     onQSkill: (p, room, socketId) => {
         const now = Date.now();
-        if (!p.lastRangedTime || now - p.lastRangedTime >= 300) {
+        if (!p.lastRangedTime || now - p.lastRangedTime >= 800) {
             p.lastRangedTime = now;
             const totalBullets = 8;
             for (let i = 0; i < totalBullets; i++) {
