@@ -178,7 +178,7 @@ io.on('connection', (socket) => {
         const allSelected = room.isSingle ? true : Object.values(room.room?.players || room.players).every(player => player.char !== null);
 
         if (allSelected && room.status !== 'playing') {
-            room.status = 'playing';
+            room.status = 'playing'; // 게임 시작 상태로 변경
             io.to(roomCode).emit('start-countdown', room.players);
             startGameLoop(roomCode);
         }
@@ -219,7 +219,6 @@ io.on('connection', (socket) => {
                         attackBox.y < enemy.y + enemy.height &&
                         attackBox.y + enemy.height > enemy.y) {
                         
-                        // 샌드백 모드일 경우 데미지를 입지 않고 체력이 유지됨
                         if (!(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
                             enemy.hp -= p.meleeDamage;
                         }
@@ -274,8 +273,8 @@ function startGameLoop(roomCode) {
 
         if (room.screenShake > 0) room.screenShake--;
 
-        // 싱글플레이 봇 AI 로직 처리
-        if (room.isSingle && room.players['bot']) {
+        // 싱글플레이 봇 AI 로직 처리 (status가 'playing'일 때만 작동하여 대기 3초간 멈춰있음)
+        if (room.isSingle && room.players['bot'] && room.status === 'playing') {
             const bot = room.players['bot'];
             const playerSocketId = Object.keys(room.players).find(id => id !== 'bot');
             const player = room.players[playerSocketId];
@@ -287,20 +286,26 @@ function startGameLoop(roomCode) {
                     const dx = player.x - bot.x;
                     const distance = Math.abs(dx);
                     
-                    // 적당한 이동 속도 적용 (너무 딱 붙지 않고 안정감 있게 접근)
                     let moveSpeed = bot.speed * 0.75;
                     if (diff === 'easy') moveSpeed *= 0.5;
                     if (diff === 'hard') moveSpeed *= 1.0;
 
-                    // 플레이어와 일정 거리(약 30~35px)를 유지하며 접근하도록 설정
                     if (distance > 35) {
                         bot.vx = dx > 0 ? moveSpeed : -moveSpeed;
                         bot.facing = dx > 0 ? 'right' : 'left';
                     } else {
-                        bot.vx = 0; // 너무 붙었을 때는 멈춰서 공격 타이밍 조절
+                        bot.vx = 0;
                     }
 
-                    // 공격 범위 내에 들어왔을 때 정확하게 공격 시도
+                    // Q스킬 및 R스킬 사용 확률적 판단 (어려움 난이도가 더 자주 사용)
+                    const skillChance = diff === 'hard' ? 0.04 : 0.015;
+                    if (bot.skillLogic && Math.random() < skillChance) {
+                        bot.skillLogic(bot, room, 'bot');
+                    }
+                    if (bot.rSkillLogic && Math.random() < (skillChance * 0.7)) {
+                        bot.rSkillLogic(bot, room, 'bot');
+                    }
+
                     const attackInterval = diff === 'hard' ? 35 : 60;
                     if (distance <= 45 && bot.botTimer % attackInterval === 0) {
                         bot.isAttacking = true;
@@ -336,7 +341,7 @@ function startGameLoop(roomCode) {
                         bot.vy = bot.jumpPower;
                     }
                 } else {
-                    bot.vx = 0; // 샌드백 모드일 때는 움직이지 않음
+                    bot.vx = 0;
                 }
             }
         }
@@ -439,7 +444,6 @@ function startGameLoop(roomCode) {
                         proj.x > enemy.x && proj.x < enemy.x + enemy.width && 
                         proj.y > enemy.y && proj.y < enemy.y + enemy.height) {
                         
-                        // 샌드백 모드일 경우 투사체 데미지도 무시
                         if (!(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
                             enemy.hp -= 6;
                         }
