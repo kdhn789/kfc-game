@@ -205,18 +205,18 @@
     <!-- 1. 방 입장 화면 -->
     <div id="lobby" class="box">
         <h1>KFC 대기실</h1>
-        <p>3자리 호실 번호를 입력하세요!</p>
+        <p>싱글 플레이 모드 (혼자서도 연습 및 게임 시작 가능)</p>
         <input type="text" id="roomInput" placeholder="예: 523" maxlength="3">
         <br>
         <button id="joinBtn">호실 들어가기</button>
     </div>
 
-    <!-- 2. 대기실 화면 -->
+    <!-- 2. 대기실 화면 (싱글 즉시 시작 및 2인 대기 겸용) -->
     <div id="waitingRoom" class="box hidden">
         <h1>호실 번호: <span id="displayRoomCode"></span></h1>
-        <p id="statusText">싸울 학우를 기다리는 중... (1/2)</p>
+        <p id="statusText">혼자서 연습하거나 상대를 기다릴 수 있습니다.</p>
         <br>
-        <button id="readyBtn" class="hidden">준비하기!</button>
+        <button id="startSingleBtn" style="background: #4CAF50; color: white; border: none; border-radius: 5px; padding: 12px 20px; font-size: 16px; font-weight: bold; cursor: pointer;">혼자서 바로 시작하기</button>
     </div>
 
     <!-- 3. 부고아 선택 화면 -->
@@ -311,7 +311,7 @@
         const joinBtn = document.getElementById('joinBtn');
         const displayRoomCode = document.getElementById('displayRoomCode');
         const statusText = document.getElementById('statusText');
-        const readyBtn = document.getElementById('readyBtn');
+        const startSingleBtn = document.getElementById('startSingleBtn');
 
         const charCards = document.querySelectorAll('.char-card');
         const confirmCharBtn = document.getElementById('confirmCharBtn');
@@ -368,7 +368,6 @@
                 touchSettingsBtn.classList.remove('active');
                 mobileControls.classList.remove('customizing');
                 
-                // 저장
                 localStorage.setItem('kfc_touch_pos', JSON.stringify({
                     bottom: mobileControls.style.bottom,
                     left: mobileControls.style.left,
@@ -377,7 +376,6 @@
             }
         });
 
-        // 드래그(마우스 및 터치)로 패널 위치 이동 구현
         let isDragging = false;
         let dragStartX = 0, dragStartY = 0;
 
@@ -402,7 +400,6 @@
             isDragging = false;
         });
 
-        // 모바일 터치 드래그 지원
         mobileControls.addEventListener('touchstart', (e) => {
             if (!isCustomizing) return;
             isDragging = true;
@@ -426,7 +423,6 @@
             isDragging = false;
         });
 
-        // 기본 키보드 조작
         window.addEventListener('keydown', (e) => {
             if (gameRoom.classList.contains('hidden')) return;
             if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
@@ -450,7 +446,6 @@
             if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') keys.rSkill = false;
         });
 
-        // 터치 버튼 이벤트 연결
         function bindTouchButton(id, keyName, isHold = true) {
             const btn = document.getElementById(id);
             if (!btn) return;
@@ -500,25 +495,13 @@
             if (e.key === 'Enter') enterRoom();
         });
 
-        socket.on('room-full', () => {
-            alert('이미 꽉 찬 호실입니다!');
-            waitingRoom.classList.add('hidden');
-            lobby.classList.remove('hidden');
-        });
-
+        // 싱글/멀티 공용 대기실 화면 이벤트
         socket.on('update-room', (count) => {
-            statusText.innerText = `학우를 기다리는 중... (${count}/2)`;
+            statusText.innerText = `현재 호실 인원: ${count명} (상대를 기다리거나 혼자 바로 시작할 수 있습니다)`;
         });
 
-        socket.on('start-ready-phase', () => {
-            statusText.innerText = '두 명이 모였습니다! 준비 버튼을 눌러주세요.';
-            readyBtn.classList.remove('hidden');
-        });
-
-        readyBtn.addEventListener('click', () => {
-            readyBtn.disabled = true;
-            readyBtn.innerText = '준비 완료!';
-            socket.emit('player-ready');
+        startSingleBtn.addEventListener('click', () => {
+            socket.emit('start-single-play');
         });
 
         socket.on('start-character-select', () => {
@@ -539,14 +522,14 @@
             if (!selectedCharacter) return;
             confirmCharBtn.disabled = true;
             charCards.forEach(c => c.style.pointerEvents = 'none');
-            charStatusText.innerText = `[${selectedCharacter}] 선택 완료! 상대 학우 기다리는 중...`;
+            charStatusText.innerText = `[${selectedCharacter}] 선택 완료! 게임 시작 준비 중...`;
             socket.emit('select-character', selectedCharacter);
         });
 
         socket.on('start-countdown', () => {
             charSelectRoom.classList.add('hidden');
             countdownRoom.classList.remove('hidden');
-            matchInfo.innerText = `매칭 완료! 좆팡나게 싸울 준비하세요.`;
+            matchInfo.innerText = `대전이 시작됩니다!`;
 
             let timeLeft = 3;
             countdownNumber.innerText = timeLeft;
@@ -664,9 +647,6 @@
             roomInput.value = '';
             selectedCharacter = null;
             
-            readyBtn.classList.add('hidden');
-            readyBtn.disabled = false;
-            readyBtn.innerText = '준비하기!';
             confirmCharBtn.disabled = true;
             charCards.forEach(c => {
                 c.classList.remove('selected');
