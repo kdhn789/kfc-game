@@ -54,6 +54,7 @@ io.on('connection', (socket) => {
             facing: 'right',
             skillLogic: null,
             rSkillLogic: null,
+            rReleaseLogic: null,
             meleeDamage: 15,
             hasUsedGrow: false, hasUsedAwaken: false, lastRangedTime: 0, lastRSkillTime: 0,
             dialogue: '',       
@@ -66,15 +67,17 @@ io.on('connection', (socket) => {
         const botCharKeys = Object.keys(CHARACTER_STATS);
         const randomBotChar = botCharKeys.length > 0 ? botCharKeys[Math.floor(Math.random() * botCharKeys.length)] : '성열진';
         const botStat = CHARACTER_STATS[randomBotChar] || { hp: 100, speed: 3, jumpPower: -12, meleeDamage: 10 };
+        const botScale = botStat.scale || 1.0;
 
         rooms[roomCode].players['bot'] = {
-            x: 660, y: 300, width: 40, height: 40,
+            x: 660, y: 300, width: 40 * botScale, height: 40 * botScale,
             vx: 0, vy: 0, hp: botStat.hp || 100, maxHp: botStat.hp || 100,
             speed: botStat.speed || 3, jumpPower: botStat.jumpPower || -12, char: randomBotChar,
             isDead: false, isAttacking: false,
             facing: 'left',
             skillLogic: botStat.onQSkill || null,
             rSkillLogic: botStat.onRSkill || null,
+            rReleaseLogic: botStat.onRRelease || null,
             meleeDamage: botStat.meleeDamage || 10,
             hasUsedGrow: false, hasUsedAwaken: false, lastRangedTime: 0, lastRSkillTime: 0,
             lastQSkillTime: 0,
@@ -123,6 +126,7 @@ io.on('connection', (socket) => {
             facing: playerKeys.length === 0 ? 'right' : 'left',
             skillLogic: null,
             rSkillLogic: null,
+            rReleaseLogic: null,
             meleeDamage: 15,
             hasUsedGrow: false, hasUsedAwaken: false, lastRangedTime: 0, lastRSkillTime: 0,
             dialogue: '',       
@@ -133,10 +137,9 @@ io.on('connection', (socket) => {
 
         io.to(roomCode).emit('update-room', Object.keys(room.players).length);
         
-        // 인원이 2명이 되면 양쪽 모두에게 준비 단계 시작 알림
         if (Object.keys(room.players).length === 2) {
             io.to(roomCode).emit('start-ready-phase');
-            io.to(roomCode).emit('start-character-select'); // 대기 시간 없이 바로 캐릭터 선택으로 유도
+            io.to(roomCode).emit('start-character-select');
         }
     });
 
@@ -178,13 +181,11 @@ io.on('connection', (socket) => {
             p.rReleaseLogic = stat.onRRelease; 
             if (stat.meleeDamage) p.meleeDamage = stat.meleeDamage;
 
-            // 특성 스케일 적용 (김도현 기본 1.5배 크기 반영)
             const scale = stat.scale || 1.0;
             p.width = 40 * scale;
             p.height = 40 * scale;
         }
         
-        // 두 플레이어가 모두 캐릭터를 골랐는지 확인
         const playerEntries = Object.values(room.players);
         let allSelected = false;
 
@@ -194,7 +195,6 @@ io.on('connection', (socket) => {
             allSelected = playerEntries.every(player => player.char !== null);
         }
 
-        // 둘 다 골랐고 아직 게임 시작 전이라면 카운트다운 및 게임 루프 시작
         if (allSelected && room.status !== 'playing' && room.status !== 'waiting_countdown') {
             room.status = 'waiting_countdown'; 
             
@@ -222,7 +222,6 @@ io.on('connection', (socket) => {
 
         if (keys.jump && p.y >= 300) { p.vy = p.jumpPower; }
 
-        // E키 기본 근접 공격
         if (keys.skill) {
             p.isAttacking = true;
             setTimeout(() => { p.isAttacking = false; }, 200);
@@ -268,7 +267,7 @@ io.on('connection', (socket) => {
             p.skillLogic(p, rooms[roomCode], socket.id);
         }
 
-        // R(쉬프트) 스킬 처리: 누르고 있을 때 자숙, 뗄 때 해제
+        // R(쉬프트) 스킬 처리: 누를 때와 뗄 때 분기 처리 완료
         if (keys.rSkill) {
             if (p.rSkillLogic) {
                 p.rSkillLogic(p, rooms[roomCode], socket.id);
@@ -307,7 +306,6 @@ function startGameLoop(roomCode) {
         if (room.screenShake > 0) room.screenShake--;
 
         if (room.status === 'playing') {
-            // 싱글플레이 봇 AI 로직 처리
             if (room.isSingle && room.players['bot']) {
                 const bot = room.players['bot'];
                 const playerSocketId = Object.keys(room.players).find(id => id !== 'bot');
@@ -361,7 +359,6 @@ function startGameLoop(roomCode) {
                 const p = room.players[id];
                 if (p.isDead) continue;
 
-                // 자숙 중일 때 체력 회복 로직 (0.5초마다 체력 3 회복)
                 if (p.isContemplating) {
                     p.contemplateTimer = (p.contemplateTimer || 0) + 1;
                     if (p.contemplateTimer >= 30) {
@@ -405,7 +402,6 @@ function startGameLoop(roomCode) {
                 if (p.x > 800 - p.width) p.x = 800 - p.width;
             }
 
-            // 플레이어 간 충돌 처리
             if (playerIds.length === 2) {
                 const p1 = room.players[playerIds[0]];
                 const p2 = room.players[playerIds[1]];
@@ -426,7 +422,6 @@ function startGameLoop(roomCode) {
                 }
             }
 
-            // 투사체(창 등) 이동 및 피격 판정
             for (let i = room.projectiles.length - 1; i >= 0; i--) {
                 const proj = room.projectiles[i];
                 
@@ -452,7 +447,6 @@ function startGameLoop(roomCode) {
                 for (let id in room.players) {
                     if (id !== proj.owner) {
                         const enemy = room.players[id];
-                        // 창(isSpear) 투사체나 일반 투사체 모두 올바르게 판정하도록 수정
                         if (!enemy.isDead &&
                             proj.x < enemy.x + enemy.width &&
                             proj.x + proj.width > enemy.x &&
@@ -460,7 +454,7 @@ function startGameLoop(roomCode) {
                             proj.y + proj.height > enemy.y) {
                             
                             if (!(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
-                                enemy.hp -= (proj.isSpear ? 30 : 6); // 창 데미지 설정 (원하는 경우 조절 가능)
+                                enemy.hp -= (proj.isSpear ? 30 : 6);
                             }
                             
                             room.screenShake = 6; 

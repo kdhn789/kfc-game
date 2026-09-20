@@ -55,7 +55,7 @@ module.exports = {
     // Shift 스킬: 울할매 뜨끈불가마 (빨간색 불 분수 16발 포물선 난사, 쿨타임 3초)
     onRSkill: (p, room, socketId) => {
         const now = Date.now();
-        if (!p.lastRSkillTime || now - p.lastRSkillTime >= 4000) {
+        if (!p.lastRSkillTime || now - p.lastRSkillTime >= 3500) {
             p.lastRSkillTime = now;
 
             const totalBullets = 12;
