@@ -44,6 +44,34 @@
         .char-card:hover { border-color: #ff9800; }
         .selected { border-color: #4CAF50 !important; background: #2e5c31; }
         
+        /* 캐릭터 스킬 설명 탭 스타일 */
+        #skillInfoTab {
+            margin-top: 20px;
+            background: #2a2a2a;
+            border: 2px solid #555;
+            border-radius: 8px;
+            padding: 15px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            text-align: left;
+        }
+        #skillInfoTab h3 {
+            margin-top: 0;
+            color: #ff9800;
+            text-align: center;
+            border-bottom: 1px solid #444;
+            padding-bottom: 8px;
+        }
+        .skill-desc-item {
+            margin-bottom: 10px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        .skill-desc-item strong {
+            color: #4CAF50;
+        }
+        
         #gameRoom {
             display: flex;
             flex-direction: column;
@@ -178,7 +206,7 @@
     <div id="lobby" class="box">
         <h1>KFC 대기실</h1>
         <p>3자리 호실 번호를 입력하세요!</p>
-        <input type="text" id="roomInput" placeholder="예: 123" maxlength="3">
+        <input type="text" id="roomInput" placeholder="예: 523" maxlength="3">
         <br>
         <button id="joinBtn">호실 들어가기</button>
     </div>
@@ -212,6 +240,16 @@
                 <p>Q: 오른쪽 딸근의 지배자 | Shift: 뜨끈불가마</p>
             </div>
         </div>
+
+        <!-- 캐릭터 스킬 설명 탭 추가 -->
+        <div id="skillInfoTab">
+            <h3>캐릭터 스킬 상세 설명</h3>
+            <div class="skill-desc-item"><strong>김도현:</strong> Q(128kg) - 체력 및 몸 크기 두 배 증가(1회용) | E(기본 타격) - 데미지 50 | SHIFT(노출증) - 체력 40% 이하 시 옷을 벗어 속도 증가(1회용)</div>
+            <div class="skill-desc-item"><strong>성열진:</strong> Q(우유 좀 줄래) - 사방으로 우유 방출(쿨타임 0.8초) | E(기본 타격) - 데미지 15 | SHIFT(배싸) - 배 위로 사정(쿨타임 5초)</div>
+            <div class="skill-desc-item"><strong>조겸:</strong> Q(여아 겁탈) - 몹시 흥분하여 대쉬(무제한) | E(기본 공격) - 데미지 15 | SHIFT(공주페스티벌VIP) - 2초간 속도 2배 증가(쿨타임 5초)</div>
+            <div class="skill-desc-item"><strong>강재승:</strong> Q(오른쪽 딸근의 지배자) - 데미지 25, 상대를 멀리 밀침(쿨타임 2초) | E(기본 타격) - 데미지 12 | SHIFT(뜨끈불가마) - 뜨끈한 불가마를 엎어 공격, 3초간 화상 데미지 4(쿨타임 4초)</div>
+        </div>
+
         <br>
         <button id="confirmCharBtn" disabled>부고아 확정</button>
         <p id="charStatusText"></p>
