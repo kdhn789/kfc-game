@@ -159,7 +159,8 @@ io.on('connection', (socket) => {
         const roomCode = socket.roomCode;
         if (!rooms[roomCode]) return;
 
-        const p = rooms[roomCode].players[socket.id];
+        const room = rooms[roomCode];
+        const p = room.players[socket.id];
         const stat = CHARACTER_STATS[charName];
 
         if (p && stat) {
@@ -168,18 +169,32 @@ io.on('connection', (socket) => {
             p.maxHp = stat.hp;
             p.speed = stat.speed;
             p.jumpPower = stat.jumpPower;
-            p.image = stat.image; //
+            p.image = stat.image;
             p.skillLogic = stat.onQSkill;
             p.rSkillLogic = stat.onRSkill;
+            p.rReleaseLogic = stat.onRRelease; 
             if (stat.meleeDamage) p.meleeDamage = stat.meleeDamage;
+
+            // 특성 스케일 적용 (기본 1.5배 크기)
+            const scale = stat.scale || 1.0;
+            p.width = 40 * scale;
+            p.height = 40 * scale;
+        }
+        
+        // [수정된 부분] 싱글플레이 또는 멀티플레이어 모두 캐릭터 선택 여부 정확히 확인
+        let allSelected = false;
+
+        if (room.isSingle) {
+            allSelected = true;
+        } else {
+            const playerEntries = Object.values(room.players);
+            // 2명이 모두 접속해 있고, 둘 다 캐릭터를 골랐는지 확인
+            if (playerEntries.length === 2) {
+                allSelected = playerEntries.every(player => player.char !== null);
+            }
         }
 
-        const room = rooms[roomCode];
-        
-        // 싱글 플레이일 경우 혼자서 캐릭터를 고르면 바로 게임 시작
-        const allSelected = room.isSingle ? true : Object.values(room.room?.players || room.players).every(player => player.char !== null);
-
-        if (allSelected && room.status !== 'playing') {
+        if (allSelected && room.status !== 'playing' && room.status !== 'waiting_countdown') {
             room.status = 'waiting_countdown'; 
             io.to(roomCode).emit('start-countdown', room.players);
             
@@ -192,7 +207,7 @@ io.on('connection', (socket) => {
             startGameLoop(roomCode);
         }
     });
-
+    
     socket.on('player-input', (keys) => {
         const roomCode = socket.roomCode;
         if (!rooms[roomCode] || rooms[roomCode].status !== 'playing') return;
@@ -251,8 +266,16 @@ io.on('connection', (socket) => {
             p.skillLogic(p, rooms[roomCode], socket.id);
         }
 
-        if (keys.rSkill && p.rSkillLogic) {
-            p.rSkillLogic(p, rooms[roomCode], socket.id);
+        // R(쉬프트) 스킬 처리: 누르고 있을 때 vs 뗄 때
+        if (keys.rSkill) {
+            if (p.rSkillLogic) {
+                p.rSkillLogic(p, rooms[roomCode], socket.id);
+            }
+        } else {
+            // 키를 떼었을 때 자숙 해제
+            if (p.rReleaseLogic) {
+                p.rReleaseLogic(p);
+            }
         }
     });
 
