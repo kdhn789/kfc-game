@@ -27,6 +27,44 @@ const rooms = {};
 io.on('connection', (socket) => {
     console.log(`사용자 접속: ${socket.id}`);
 
+    // 싱글 플레이(찐따 플레이) 시작 요청 처리 추가
+    socket.on('start-single-play', () => {
+        const roomCode = 'single_' + socket.id;
+        
+        rooms[roomCode] = { 
+            players: {}, 
+            projectiles: [], 
+            screenShake: 0, 
+            status: 'waiting',
+            gameInterval: null,
+            isSingle: true
+        };
+
+        socket.join(roomCode);
+        socket.roomCode = roomCode;
+        socket.isReady = true;
+
+        // 혼자 플레이하므로 플레이어 1명 생성
+        rooms[roomCode].players[socket.id] = {
+            x: 100, y: 300, width: 40, height: 40,
+            vx: 0, vy: 0, hp: 100, maxHp: 100,
+            speed: 5, jumpPower: -12, char: null,
+            isDead: false, isAttacking: false,
+            facing: 'right',
+            skillLogic: null,
+            rSkillLogic: null,
+            meleeDamage: 15,
+            hasUsedGrow: false, hasUsedAwaken: false, lastRangedTime: 0, lastRSkillTime: 0,
+            dialogue: '',       
+            dialogueTimer: 0,
+            burnTimer: 0, 
+            burnTicks: 0  
+        };
+
+        // 바로 캐릭터 선택 화면으로 전환 신호 전송
+        socket.emit('start-character-select');
+    });
+
     socket.on('join-room', (roomCode) => {
         if (!rooms[roomCode] || rooms[roomCode].status === 'ended') {
             rooms[roomCode] = { 
@@ -64,8 +102,8 @@ io.on('connection', (socket) => {
             hasUsedGrow: false, hasUsedAwaken: false, lastRangedTime: 0, lastRSkillTime: 0,
             dialogue: '',       
             dialogueTimer: 0,
-            burnTimer: 0, // 화상 지속 시간 타이머
-            burnTicks: 0  // 화상 남은 횟수
+            burnTimer: 0, 
+            burnTicks: 0  
         };
 
         io.to(roomCode).emit('update-room', Object.keys(room.players).length);
@@ -111,7 +149,9 @@ io.on('connection', (socket) => {
         }
 
         const room = rooms[roomCode];
-        const allSelected = Object.values(room.players).every(player => player.char !== null);
+        
+        // 싱글 플레이일 경우 혼자서 캐릭터를 고르면 바로 게임 시작
+        const allSelected = room.isSingle ? true : Object.values(room.room?.players || room.players).every(player => player.char !== null);
 
         if (allSelected && room.status !== 'playing') {
             room.status = 'playing';
@@ -132,7 +172,7 @@ io.on('connection', (socket) => {
 
         if (keys.jump && p.y >= 300) { p.vy = p.jumpPower; }
 
-        // E키 기본 근접 공격
+        // E키 기본 근접 공격 (싱글일 때는 맞출 적이 없거나 허공 공격 처리)
         if (keys.skill) {
             p.isAttacking = true;
             setTimeout(() => { p.isAttacking = false; }, 200);
@@ -217,20 +257,17 @@ function startGameLoop(roomCode) {
                 if (p.dialogueTimer === 0) p.dialogue = '';
             }
 
-            // 화상(도트 데미지) 처리: 3초간 0.5초마다(30프레임) 피 4씩 닳게 설정 (총 6번 = 24 데미지 또는 유저 요구사항 반영)
-            // 3초간 총 피 4씩 닳는 누적 방식이나 주기적 닳기 처리
             if (p.burnTicks > 0) {
                 p.burnTimer++;
-                if (p.burnTimer >= 30) { // 매 0.5초마다
+                if (p.burnTimer >= 30) { 
                     p.burnTimer = 0;
-                    p.hp -= 2; // 0.5초마다 2씩 총 3초간 6번 = 12, 혹은 3초간 총 피 4씩 (원하시는 대로 조절 가능)
+                    p.hp -= 2; 
                     p.burnTicks--;
                     
                     if (p.hp <= 0) {
                         p.hp = 0;
                         p.isDead = true;
                         room.status = 'ended';
-                        // 적이 화상으로 죽었을 경우 처리
                         const killerId = Object.keys(room.players).find(k => k !== id);
                         io.to(roomCode).emit('game-over', { winner: killerId });
                     }
@@ -248,7 +285,7 @@ function startGameLoop(roomCode) {
             if (p.x > 800 - p.width) p.x = 800 - p.width;
         }
 
-        // 플레이어끼리 밟기 충돌 처리
+        // 플레이어끼리 밟기 충돌 처리 (2명이 있을 때만)
         if (playerIds.length === 2) {
             const p1 = room.players[playerIds[0]];
             const p2 = room.players[playerIds[1]];
@@ -277,7 +314,7 @@ function startGameLoop(roomCode) {
             }
         }
 
-        // 투사체 이동 및 피격 판정 (뜨끈불가마 맞으면 화상 효과 부여)
+        // 투사체 이동 및 피격 판정
         for (let i = room.projectiles.length - 1; i >= 0; i--) {
             const proj = room.projectiles[i];
             
@@ -310,9 +347,8 @@ function startGameLoop(roomCode) {
                         enemy.hp -= 6;
                         room.screenShake = 6; 
 
-                        // 강재승의 불꽃(주황/빨간색)에 맞았을 때 화상 디버프 부여!
                         if (proj.color === '#ff4500') {
-                            enemy.burnTicks = 6; // 3초 동안 (0.5초마다 총 6번)
+                            enemy.burnTicks = 6; 
                             enemy.burnTimer = 0;
                         }
 
