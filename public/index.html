@@ -12,6 +12,7 @@
             margin: 0;
             padding-top: 20px;
             touch-action: manipulation;
+            overflow-x: hidden;
         }
         .box {
             background: #333;
@@ -47,6 +48,7 @@
             align-items: center;
             justify-content: center;
             width: 100%;
+            position: relative;
         }
         #gameCanvas {
             background: #111;
@@ -56,40 +58,76 @@
             height: auto;
         }
 
-        /* 모바일 터치 패널 스타일 (항상 flex로 동작하도록 수정) */
+        /* 모바일 터치 조작 배치 (좌측 조이스틱 / 우측 액션 버튼) */
         #mobileControls {
-            display: flex; 
+            display: flex;
             width: 100%;
             max-width: 800px;
             margin-top: 15px;
             justify-content: space-between;
-            padding: 0 10px;
+            align-items: center;
+            padding: 0 20px;
             box-sizing: border-box;
         }
-        .control-group {
+
+        /* 왼쪽 조이스틱 영역 */
+        #joystickArea {
+            width: 140px;
+            height: 70px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 35px;
             display: flex;
-            gap: 10px;
+            justify-content: space-around;
+            align-items: center;
+            user-select: none;
+            -webkit-user-select: none;
         }
-        .touch-btn {
+
+        .joystick-btn {
+            background: rgba(255, 255, 255, 0.25);
+            color: white;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            font-size: 22px;
+            font-weight: bold;
+            width: 55px;
+            height: 55px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: none;
+        }
+        .joystick-btn:active {
+            background: rgba(255, 255, 255, 0.6);
+        }
+
+        /* 오른쪽 액션 버튼 영역 (2행 2열 배치) */
+        #actionArea {
+            display: grid;
+            grid-template-columns: repeat(2, 60px);
+            grid-template-rows: repeat(2, 60px);
+            gap: 10px;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .action-btn {
             background: rgba(255, 255, 255, 0.2);
             color: white;
             border: 2px solid #fff;
             border-radius: 12px;
-            font-size: 20px;
+            font-size: 18px;
             font-weight: bold;
-            width: 65px;
-            height: 65px;
             display: flex;
             align-items: center;
             justify-content: center;
-            user-select: none;
-            -webkit-user-select: none;
             touch-action: none;
         }
-        .touch-btn:active {
+        .action-btn:active {
             background: rgba(255, 255, 255, 0.5);
         }
-        #btn-r { background: rgba(244, 67, 54, 0.4); border-color: #f44336; }
+        #btn-r { background: rgba(244, 67, 54, 0.4); border-color: #f44336; font-size: 14px; }
 
         #resultScreen {
             position: fixed;
@@ -163,17 +201,20 @@
         <h2>조작: 방향키(이동/점프) | E키(타격) | Q키(특수) | Shift키(궁극기)</h2>
         <canvas id="gameCanvas" width="800" height="400"></canvas>
         
-        <!-- 모바일 터치 조작 버튼 패널 -->
+        <!-- 모바일 터치 조작 패널 (좌측 조이스틱 스타일 이동 / 우측 2x2 액션 버튼) -->
         <div id="mobileControls">
-            <div class="control-group">
-                <button class="touch-btn" id="btn-left">◀</button>
-                <button class="touch-btn" id="btn-right">▶</button>
-                <button class="touch-btn" id="btn-jump">▲</button>
+            <!-- 왼쪽: 좌우 이동 조이스틱 바 -->
+            <div id="joystickArea">
+                <button class="joystick-btn" id="btn-left">◀</button>
+                <button class="joystick-btn" id="btn-right">▶</button>
             </div>
-            <div class="control-group">
-                <button class="touch-btn" id="btn-e">E</button>
-                <button class="touch-btn" id="btn-q">Q</button>
-                <button class="touch-btn" id="btn-r">Shift</button>
+
+            <!-- 오른쪽: 점프, E, Q, SHIFT 2x2 배치 -->
+            <div id="actionArea">
+                <button class="action-btn" id="btn-jump">▲</button>
+                <button class="action-btn" id="btn-e">E</button>
+                <button class="action-btn" id="btn-q">Q</button>
+                <button class="action-btn" id="btn-r">SHIFT</button>
             </div>
         </div>
     </div>
