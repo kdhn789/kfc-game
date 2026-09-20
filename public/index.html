@@ -202,17 +202,17 @@
     <!-- 터치 패널 위치 설정 토글 버튼 -->
     <button id="touchSettingsBtn">터치 조작 위치 설정</button>
 
-    <!-- 1. 방 입장 및 찐따플레이(싱글) 시작 화면 -->
+    <!-- 1. 호실 입장 대기 화면 -->
     <div id="lobby" class="box">
         <h1>KFC 대기실</h1>
-        <p>멀티플레이를 위해 호실 번호를 입력하거나, 혼자서 찐따플레이를 시작하세요.</p>
+        <p>호실 번호를 입력하세요.</p>
         <input type="text" id="roomInput" placeholder="예: 523" maxlength="3">
         <br>
-        <button id="joinBtn">호실 들어가기 (멀티)</button>
+        <button id="joinBtn">호실 들어가기</button>
         
         <!-- 호실 번호 쓰는 칸 바로 아래에 추가된 찐따플레이(싱글) 버튼 영역 -->
         <div style="margin-top: 15px; border-top: 1px solid #555; padding-top: 15px;">
-            <button id="jjintaPlayBtn" style="background: #ff9800; color: #000; border: none; border-radius: 5px; padding: 12px 20px; font-size: 16px; font-weight: bold; cursor: pointer;">찐따플레이 시작하기 (혼자 하기)</button>
+            <button id="jjintaPlayBtn" style="background: #ff9800; color: #000; border: none; border-radius: 5px; padding: 12px 20px; font-size: 16px; font-weight: bold; cursor: pointer;">찐따플레이</button>
         </div>
     </div>
 
@@ -242,10 +242,6 @@
                 <h3>강재승</h3>
                 <p>Q: 오른쪽 딸근의 지배자 | Shift: 뜨끈불가마</p>
             </div>
-            <div class="char-card" data-char="찐따플레이">
-                <h3>찐따플레이</h3>
-                <p>Q: 눈치보기 | Shift: 구석탱이박히기</p>
-            </div>
         </div>
 
         <!-- 캐릭터 스킬 설명 탭 추가 -->
@@ -255,7 +251,6 @@
             <div class="skill-desc-item"><strong>성열진:</strong> Q(우유 좀 줄래) - 사방으로 우유 방출(쿨타임 0.8초) | E(기본 타격) - 데미지 15 | SHIFT(배싸) - 배 위로 사정(쿨타임 5초)</div>
             <div class="skill-desc-item"><strong>조겸:</strong> Q(여아 겁탈) - 몹시 흥분하여 대쉬(무제한) | E(기본 공격) - 데미지 15 | SHIFT(공주페스티벌VIP) - 2초간 속도 2배 증가(쿨타임 5초)</div>
             <div class="skill-desc-item"><strong>강재승:</strong> Q(오른쪽 딸근의 지배자) - 데미지 25, 상대를 멀리 밀침(쿨타임 2초) | E(기본 타격) - 데미지 12 | SHIFT(뜨끈불가마) - 뜨끈한 불가마를 엎어 공격, 3초간 화상 데미지 4(쿨타임 4초)</div>
-            <div class="skill-desc-item"><strong>찐따플레이:</strong> Q(눈치보기) - 제자리에서 1초간 투명화 및 무적(쿨타임 4초) | E(기본 타격) - 데미지 10 | SHIFT(구석탱이박히기) - 맵 끝으로 순간 이동(쿨타임 6초)</div>
         </div>
 
         <br>
@@ -331,14 +326,12 @@
             '성열진': new Image(),
             '조겸': new Image(),
             '강재승': new Image(),
-            '찐따플레이': new Image()
         };
         charImages['김도현'].src = './images/kimdohyun.png';
         charImages['김도현_각성'].src = './images/kimdohyun_awakened.png';
         charImages['성열진'].src = './images/seongyeoljin.png';
         charImages['조겸'].src = './images/jogyum.png';
         charImages['강재승'].src = './images/kangjaeseung.png';
-        charImages['찐따플레이'].src = './images/jjintaplay.png';
 
         let currentRoom = '';
         let selectedCharacter = null;
