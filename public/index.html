@@ -193,7 +193,6 @@
         .win-text { color: #4CAF50; text-shadow: 0 0 20px #4CAF50; }
         .fail-text { color: #f44336; text-shadow: 0 0 20px #f44336; }
 
-        /* 난이도 선택 모달창 스타일 */
         #difficultyModal {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -223,7 +222,6 @@
 
     <button id="touchSettingsBtn">터치 조작 위치 설정</button>
 
-    <!-- 1. 호실 입장 대기 화면 -->
     <div id="lobby" class="box">
         <h1>KFC 대기실</h1>
         <p>호실 번호를 입력하세요.</p>
@@ -236,7 +234,6 @@
         </div>
     </div>
 
-    <!-- 1-1. 찐따플레이 난이도 선택 모달창 -->
     <div id="difficultyModal" class="hidden">
         <div class="box" style="text-align: center;">
             <h2>봇 난이도를 선택하세요</h2>
@@ -248,7 +245,6 @@
         </div>
     </div>
 
-    <!-- 2. 대기실 화면 (멀티용) -->
     <div id="waitingRoom" class="box hidden">
         <h1>호실 번호: <span id="displayRoomCode"></span></h1>
         <p id="statusText">상대를 기다리는 중입니다...</p>
@@ -256,7 +252,6 @@
         <button id="waitExitBtn" style="background: #f44336; color: white; border: none; border-radius: 5px; padding: 8px 15px; cursor: pointer;">나가기</button>
     </div>
 
-    <!-- 3. 부고아 선택 화면 -->
     <div id="charSelectRoom" class="box hidden">
         <h1>부고아를 선택하세요!</h1>
         <div id="charList">
@@ -292,14 +287,12 @@
         <p id="charStatusText"></p>
     </div>
 
-    <!-- 4. 3초 카운트다운 화면 -->
     <div id="countdownRoom" class="box hidden">
         <h1>대전이 곧 시작됩니다!</h1>
         <h2 id="countdownNumber" style="font-size: 60px; color: #ffeb3b;">3</h2>
         <p id="matchInfo"></p>
     </div>
 
-    <!-- 5. 실제 게임 화면 -->
     <div id="gameRoom" class="hidden">
         <div style="display: flex; justify-content: space-between; width: 800px; align-items: center; margin-bottom: 5px;">
             <h2 style="margin: 0;">조작키로 대결하세요!</h2>
@@ -322,7 +315,6 @@
         </div>
     </div>
 
-    <!-- 6. 승리/패배 결과 화면 -->
     <div id="resultScreen" class="hidden">
         <h1 id="resultTitle">WIN</h1>
         <button id="backToLobbyBtn" style="font-size: 20px; padding: 15px 30px; background: #fff; border: none; border-radius: 5px; font-weight: bold;">메인 화면으로 돌아가기</button>
@@ -360,7 +352,6 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
-        // 나가기 버튼들
         const waitExitBtn = document.getElementById('waitExitBtn');
         const charExitBtn = document.getElementById('charExitBtn');
         const gameExitBtn = document.getElementById('gameExitBtn');
@@ -531,7 +522,6 @@
             if (e.key === 'Enter') enterRoom();
         });
 
-        // 찐따플레이 버튼 누르면 난이도 선택 모달창 띄우기
         jjintaPlayBtn.addEventListener('click', () => {
             difficultyModal.classList.remove('hidden');
         });
@@ -540,7 +530,6 @@
             difficultyModal.classList.add('hidden');
         });
 
-        // 난이도 버튼 클릭 시 서버로 전송
         diffButtons.forEach(btn => {
             btn.addEventListener('click', () => {
                 const diff = btn.getAttribute('data-diff');
@@ -550,9 +539,8 @@
             });
         });
 
-        // 나가기 버튼 기능 처리
         function returnToLobby() {
-            window.location.reload(); // 상태 초기화를 위해 새로고침 또는 화면 전환 처리
+            window.location.reload();
         }
         waitExitBtn.addEventListener('click', returnToLobby);
         charExitBtn.addEventListener('click', returnToLobby);
@@ -663,6 +651,15 @@
                         ctx.fillStyle = (id === socket.id) ? '#4CAF50' : '#f44336';
                         ctx.fillRect(p.x, p.y, p.width, p.height);
                     }
+
+                    // ⭐ 내 캐릭터는 초록색, 상대방/봇은 빨간색 외곽선 적용
+                    if (id === socket.id) {
+                        ctx.strokeStyle = '#2ecc71'; // 초록색 (내 캐릭터)
+                    } else {
+                        ctx.strokeStyle = '#e74c3c'; // 빨간색 (상대방/봇)
+                    }
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(p.x, p.y, p.width, p.height);
 
                     if (p.isAttacking) {
                         ctx.fillStyle = '#ffeb3b';
