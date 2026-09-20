@@ -77,7 +77,7 @@ io.on('connection', (socket) => {
             rSkillLogic: botStat.onRSkill || null,
             meleeDamage: botStat.meleeDamage || 10,
             hasUsedGrow: false, hasUsedAwaken: false, lastRangedTime: 0, lastRSkillTime: 0,
-            lastQSkillTime: 0, // 봇 Q스킬 쿨타임 기록용
+            lastQSkillTime: 0,
             dialogue: '',       
             dialogueTimer: 0,
             burnTimer: 0, 
@@ -408,7 +408,7 @@ function startGameLoop(roomCode) {
                 if (p.x > 800 - p.width) p.x = 800 - p.width;
             }
 
-            // 플레이어끼리 밟기 충돌 처리 (2명이 있을 때만)
+            // 플레이어끼리 충돌 처리 (2명이 있을 때만)
             if (playerIds.length === 2) {
                 const p1 = room.players[playerIds[0]];
                 const p2 = room.players[playerIds[1]];
@@ -417,13 +417,8 @@ function startGameLoop(roomCode) {
                     if (p1.x < p2.x + p2.width && p1.x + p1.width > p2.x &&
                         p1.y < p2.y + p2.height && p1.y + p1.height > p2.y) {
                         
-                        if (p1.vy > 0 && p1.y + p1.height - p1.vy <= p2.y + 15) {
-                            p1.y = p2.y - p1.height;
-                            p1.vy = 0;
-                        } else if (p2.vy > 0 && p2.y + p2.height - p2.vy <= p1.y + 15) {
-                            p2.y = p1.y - p2.height;
-                            p2.vy = 0;
-                        } else {
+                        // 싱글플레이이거나 봇이 포함된 경우 위로 올라타는(밟기) 로직을 제외하고 좌우로만 밀어냄
+                        if (room.isSingle) {
                             const overlapX = Math.min(p1.x + p1.width - p2.x, p2.x + p2.width - p1.x);
                             if (p1.x < p2.x) {
                                 p1.x -= overlapX / 2;
@@ -431,6 +426,24 @@ function startGameLoop(roomCode) {
                             } else {
                                 p1.x += overlapX / 2;
                                 p2.x -= overlapX / 2;
+                            }
+                        } else {
+                            // 기존 멀티플레이어 간 밟기 및 밀어내기 충돌 처리
+                            if (p1.vy > 0 && p1.y + p1.height - p1.vy <= p2.y + 15) {
+                                p1.y = p2.y - p1.height;
+                                p1.vy = 0;
+                            } else if (p2.vy > 0 && p2.y + p2.height - p2.vy <= p1.y + 15) {
+                                p2.y = p1.y - p2.height;
+                                p2.vy = 0;
+                            } else {
+                                const overlapX = Math.min(p1.x + p1.width - p2.x, p2.x + p2.width - p1.x);
+                                if (p1.x < p2.x) {
+                                    p1.x -= overlapX / 2;
+                                    p2.x += overlapX / 2;
+                                } else {
+                                    p1.x += overlapX / 2;
+                                    p2.x -= overlapX / 2;
+                                }
                             }
                         }
                     }
