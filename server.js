@@ -27,8 +27,8 @@ const rooms = {};
 io.on('connection', (socket) => {
     console.log(`사용자 접속: ${socket.id}`);
 
-    // 싱글 플레이(찐따 플레이) 시작 요청 처리 추가
-    socket.on('start-single-play', () => {
+    // 싱글 플레이(찐따 플레이) 시작 요청 처리 (난이도 포함)
+    socket.on('start-single-play', (difficulty) => {
         const roomCode = 'single_' + socket.id;
         
         rooms[roomCode] = { 
@@ -37,14 +37,15 @@ io.on('connection', (socket) => {
             screenShake: 0, 
             status: 'waiting',
             gameInterval: null,
-            isSingle: true
+            isSingle: true,
+            botDifficulty: difficulty || 'normal'
         };
 
         socket.join(roomCode);
         socket.roomCode = roomCode;
         socket.isReady = true;
 
-        // 혼자 플레이하므로 플레이어 1명 생성
+        // 플레이어 생성
         rooms[roomCode].players[socket.id] = {
             x: 100, y: 300, width: 40, height: 40,
             vx: 0, vy: 0, hp: 100, maxHp: 100,
@@ -59,6 +60,29 @@ io.on('connection', (socket) => {
             dialogueTimer: 0,
             burnTimer: 0, 
             burnTicks: 0  
+        };
+
+        // 봇 캐릭터 생성 (상대방 ID: 'bot')
+        const botCharKeys = Object.keys(CHARACTER_STATS);
+        const randomBotChar = botCharKeys.length > 0 ? botCharKeys[Math.floor(Math.random() * botCharKeys.length)] : '성열진';
+        const botStat = CHARACTER_STATS[randomBotChar] || { hp: 100, speed: 3, jumpPower: -12, meleeDamage: 10 };
+
+        rooms[roomCode].players['bot'] = {
+            x: 660, y: 300, width: 40, height: 40,
+            vx: 0, vy: 0, hp: botStat.hp || 100, maxHp: botStat.hp || 100,
+            speed: botStat.speed || 3, jumpPower: botStat.jumpPower || -12, char: randomBotChar,
+            isDead: false, isAttacking: false,
+            facing: 'left',
+            skillLogic: botStat.onQSkill || null,
+            rSkillLogic: botStat.onRSkill || null,
+            meleeDamage: botStat.meleeDamage || 10,
+            hasUsedGrow: false, hasUsedAwaken: false, lastRangedTime: 0, lastRSkillTime: 0,
+            dialogue: '',       
+            dialogueTimer: 0,
+            burnTimer: 0, 
+            burnTicks: 0,
+            isBot: true,
+            botTimer: 0
         };
 
         // 바로 캐릭터 선택 화면으로 전환 신호 전송
@@ -172,7 +196,7 @@ io.on('connection', (socket) => {
 
         if (keys.jump && p.y >= 300) { p.vy = p.jumpPower; }
 
-        // E키 기본 근접 공격 (싱글일 때는 맞출 적이 없거나 허공 공격 처리)
+        // E키 기본 근접 공격
         if (keys.skill) {
             p.isAttacking = true;
             setTimeout(() => { p.isAttacking = false; }, 200);
@@ -245,6 +269,67 @@ function startGameLoop(roomCode) {
         }
 
         if (room.screenShake > 0) room.screenShake--;
+
+        // 싱글플레이 봇 AI 로직 처리
+        if (room.isSingle && room.players['bot']) {
+            const bot = room.players['bot'];
+            const playerSocketId = Object.keys(room.players).find(id => id !== 'bot');
+            const player = room.players[playerSocketId];
+
+            if (!bot.isDead && player && !player.isDead) {
+                const diff = room.botDifficulty;
+                if (diff !== 'sandbag') {
+                    bot.botTimer++;
+                    const dx = player.x - bot.x;
+                    
+                    let moveSpeed = bot.speed;
+                    if (diff === 'easy') moveSpeed *= 0.5;
+                    if (diff === 'hard') moveSpeed *= 1.2;
+
+                    if (Math.abs(dx) > 30) {
+                        bot.vx = dx > 0 ? moveSpeed : -moveSpeed;
+                        bot.facing = dx > 0 ? 'right' : 'left';
+                    } else {
+                        bot.vx = 0;
+                        if (diff !== 'easy' && bot.botTimer % 45 === 0) {
+                            bot.isAttacking = true;
+                            setTimeout(() => { bot.isAttacking = false; }, 200);
+
+                            const attackBox = {
+                                x: bot.facing === 'right' ? bot.x + bot.width : bot.x - 40,
+                                y: bot.y,
+                                width: 40,
+                                height: bot.height
+                            };
+
+                            if (attackBox.x < player.x + player.width &&
+                                attackBox.x + attackBox.width > player.x &&
+                                attackBox.y < player.y + player.height &&
+                                attackBox.y + player.height > player.y) {
+                                
+                                player.hp -= bot.meleeDamage;
+                                room.screenShake = 8;
+
+                                if (player.hp <= 0) {
+                                    player.hp = 0;
+                                    player.isDead = true;
+                                    room.status = 'ended';
+                                    io.to(roomCode).emit('game-over', { winner: 'bot' });
+                                }
+                            }
+                        }
+                    }
+
+                    if (diff === 'hard' && bot.y >= 300 && Math.random() < 0.03) {
+                        bot.vy = bot.jumpPower;
+                    } else if (diff === 'normal' && bot.y >= 300 && Math.random() < 0.01) {
+                        bot.vy = bot.jumpPower;
+                    }
+                } else {
+                    bot.vx = 0;
+                }
+            }
+        }
 
         const playerIds = Object.keys(room.players);
 

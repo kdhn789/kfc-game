@@ -44,7 +44,6 @@
         .char-card:hover { border-color: #ff9800; }
         .selected { border-color: #4CAF50 !important; background: #2e5c31; }
         
-        /* 캐릭터 스킬 설명 탭 스타일 */
         #skillInfoTab {
             margin-top: 20px;
             background: #2a2a2a;
@@ -88,7 +87,6 @@
             height: auto;
         }
 
-        /* 터치 패널 위치 설정 버튼 */
         #touchSettingsBtn {
             position: fixed;
             top: 15px;
@@ -106,7 +104,6 @@
         #touchSettingsBtn:hover { background: #555; }
         #touchSettingsBtn.active { background: #ff9800; border-color: #ff9800; }
 
-        /* 터치 조작 패널 컨테이너 (자유 이동 가능) */
         #mobileControls {
             position: absolute;
             bottom: 20px;
@@ -195,11 +192,35 @@
         #resultTitle { font-size: 80px; font-weight: bold; margin-bottom: 20px; letter-spacing: 5px; }
         .win-text { color: #4CAF50; text-shadow: 0 0 20px #4CAF50; }
         .fail-text { color: #f44336; text-shadow: 0 0 20px #f44336; }
+
+        /* 난이도 선택 모달창 스타일 */
+        #difficultyModal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 150;
+        }
+        .diff-btn {
+            background: #444;
+            color: white;
+            border: 2px solid #ff9800;
+            padding: 15px 30px;
+            margin: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 200px;
+        }
+        .diff-btn:hover { background: #ff9800; color: black; }
     </style>
 </head>
 <body>
 
-    <!-- 터치 패널 위치 설정 토글 버튼 -->
     <button id="touchSettingsBtn">터치 조작 위치 설정</button>
 
     <!-- 1. 호실 입장 대기 화면 -->
@@ -210,9 +231,20 @@
         <br>
         <button id="joinBtn">호실 들어가기</button>
         
-        <!-- 호실 번호 쓰는 칸 바로 아래에 추가된 찐따플레이(싱글) 버튼 영역 -->
         <div style="margin-top: 15px; border-top: 1px solid #555; padding-top: 15px;">
             <button id="jjintaPlayBtn" style="background: #ff9800; color: #000; border: none; border-radius: 5px; padding: 12px 20px; font-size: 16px; font-weight: bold; cursor: pointer;">찐따플레이</button>
+        </div>
+    </div>
+
+    <!-- 1-1. 찐따플레이 난이도 선택 모달창 -->
+    <div id="difficultyModal" class="hidden">
+        <div class="box" style="text-align: center;">
+            <h2>봇 난이도를 선택하세요</h2>
+            <button class="diff-btn" data-diff="easy">쉬움</button><br>
+            <button class="diff-btn" data-diff="normal">보통</button><br>
+            <button class="diff-btn" data-diff="hard">어려움</button><br>
+            <button class="diff-btn" data-diff="sandbag">샌드백</button><br>
+            <button id="closeDiffModal" style="background: #666; color: white; border: none; margin-top: 15px; padding: 8px 15px; border-radius: 5px; cursor: pointer;">취소</button>
         </div>
     </div>
 
@@ -220,6 +252,8 @@
     <div id="waitingRoom" class="box hidden">
         <h1>호실 번호: <span id="displayRoomCode"></span></h1>
         <p id="statusText">상대를 기다리는 중입니다...</p>
+        <br>
+        <button id="waitExitBtn" style="background: #f44336; color: white; border: none; border-radius: 5px; padding: 8px 15px; cursor: pointer;">나가기</button>
     </div>
 
     <!-- 3. 부고아 선택 화면 -->
@@ -244,7 +278,6 @@
             </div>
         </div>
 
-        <!-- 캐릭터 스킬 설명 탭 추가 -->
         <div id="skillInfoTab">
             <h3>캐릭터 스킬 상세 설명</h3>
             <div class="skill-desc-item"><strong>김도현:</strong> Q(128kg) - 체력 및 몸 크기 두 배 증가(1회용) | E(기본 타격) - 데미지 50 | SHIFT(노출증) - 체력 40% 이하 시 옷을 벗어 속도 증가(1회용)</div>
@@ -255,6 +288,7 @@
 
         <br>
         <button id="confirmCharBtn" disabled>부고아 확정</button>
+        <button id="charExitBtn" style="background: #f44336; color: white; border: none; border-radius: 5px; padding: 10px 15px; cursor: pointer;">나가기</button>
         <p id="charStatusText"></p>
     </div>
 
@@ -267,10 +301,12 @@
 
     <!-- 5. 실제 게임 화면 -->
     <div id="gameRoom" class="hidden">
-        <h2>조작키로 대결하세요!</h2>
+        <div style="display: flex; justify-content: space-between; width: 800px; align-items: center; margin-bottom: 5px;">
+            <h2 style="margin: 0;">조작키로 대결하세요!</h2>
+            <button id="gameExitBtn" style="background: #f44336; color: white; border: none; border-radius: 5px; padding: 6px 12px; font-weight: bold; cursor: pointer;">나가기</button>
+        </div>
         <canvas id="gameCanvas" width="800" height="400"></canvas>
         
-        <!-- 모바일 터치 조작 패널 (드래그하여 위치 변경 가능) -->
         <div id="mobileControls">
             <div id="joystickArea">
                 <button class="joystick-btn" id="btn-left">◀</button>
@@ -308,6 +344,10 @@
         const roomInput = document.getElementById('roomInput');
         const joinBtn = document.getElementById('joinBtn');
         const jjintaPlayBtn = document.getElementById('jjintaPlayBtn');
+        const difficultyModal = document.getElementById('difficultyModal');
+        const closeDiffModal = document.getElementById('closeDiffModal');
+        const diffButtons = document.querySelectorAll('.diff-btn');
+
         const displayRoomCode = document.getElementById('displayRoomCode');
         const statusText = document.getElementById('statusText');
 
@@ -319,6 +359,11 @@
 
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
+
+        // 나가기 버튼들
+        const waitExitBtn = document.getElementById('waitExitBtn');
+        const charExitBtn = document.getElementById('charExitBtn');
+        const gameExitBtn = document.getElementById('gameExitBtn');
 
         const charImages = {
             '김도현': new Image(),
@@ -338,7 +383,6 @@
         let keys = { left: false, right: false, jump: false, skill: false, qSkill: false, rSkill: false };
         let gameInterval = null;
 
-        // 터치 패널 위치 커스텀 및 로컬스토리지 복원
         const mobileControls = document.getElementById('mobileControls');
         const touchSettingsBtn = document.getElementById('touchSettingsBtn');
         let isCustomizing = false;
@@ -392,9 +436,7 @@
             mobileControls.style.transform = 'none';
         });
 
-        window.addEventListener('mouseup', () => {
-            isDragging = false;
-        });
+        window.addEventListener('mouseup', () => { isDragging = false; });
 
         mobileControls.addEventListener('touchstart', (e) => {
             if (!isCustomizing) return;
@@ -415,9 +457,7 @@
             mobileControls.style.transform = 'none';
         });
 
-        window.addEventListener('touchend', () => {
-            isDragging = false;
-        });
+        window.addEventListener('touchend', () => { isDragging = false; });
 
         window.addEventListener('keydown', (e) => {
             if (gameRoom.classList.contains('hidden')) return;
@@ -491,14 +531,35 @@
             if (e.key === 'Enter') enterRoom();
         });
 
-        // 호실 번호 입력창 아래의 '찐따플레이 시작하기 (혼자 하기)' 버튼 이벤트
+        // 찐따플레이 버튼 누르면 난이도 선택 모달창 띄우기
         jjintaPlayBtn.addEventListener('click', () => {
-            lobby.classList.add('hidden');
-            socket.emit('start-single-play');
+            difficultyModal.classList.remove('hidden');
         });
 
+        closeDiffModal.addEventListener('click', () => {
+            difficultyModal.classList.add('hidden');
+        });
+
+        // 난이도 버튼 클릭 시 서버로 전송
+        diffButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const diff = btn.getAttribute('data-diff');
+                difficultyModal.classList.add('hidden');
+                lobby.classList.add('hidden');
+                socket.emit('start-single-play', diff);
+            });
+        });
+
+        // 나가기 버튼 기능 처리
+        function returnToLobby() {
+            window.location.reload(); // 상태 초기화를 위해 새로고침 또는 화면 전환 처리
+        }
+        waitExitBtn.addEventListener('click', returnToLobby);
+        charExitBtn.addEventListener('click', returnToLobby);
+        gameExitBtn.addEventListener('click', returnToLobby);
+
         socket.on('update-room', (count) => {
-            statusText.innerText = `현재 호실 인원: ${count명} (상대를 기다리는 중...)`;
+            statusText.innerText = `현재 호실 인원: ${count}명 (상대를 기다리는 중...)`;
         });
 
         socket.on('start-character-select', () => {
@@ -611,7 +672,8 @@
 
                     ctx.fillStyle = '#fff';
                     ctx.font = '14px Arial';
-                    ctx.fillText(`${p.char} (HP: ${Math.round(p.hp)}/${p.maxHp})`, p.x - 10, p.y - 15);
+                    const displayName = id === 'bot' ? `[BOT] ${p.char}` : p.char;
+                    ctx.fillText(`${displayName} (HP: ${Math.round(p.hp)}/${p.maxHp})`, p.x - 10, p.y - 15);
 
                     if (p.dialogue && p.dialogueTimer > 0) {
                         ctx.fillStyle = '#ffeb3b';
