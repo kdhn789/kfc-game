@@ -283,7 +283,7 @@
             <div class="skill-desc-item"><strong>성열진:</strong> Q(우유 좀 줄래) - 사방으로 우유 방출(쿨타임 0.8초) | E(기본 타격) - 데미지 15 | SHIFT(배싸) - 배 위로 사정(쿨타임 5초)[cite: 5, 7]</div>
             <div class="skill-desc-item"><strong>조겸:</strong> Q(여아 겁탈) - 몹시 흥분하여 대쉬(무제한) | E(기본 공격) - 데미지 15 | SHIFT(공주페스티벌VIP) - 2초간 속도 2배 증가(쿨타임 5초)[cite: 5, 8]</div>
             <div class="skill-desc-item"><strong>강재승:</strong> Q(오른쪽 딸근의 지배자) - 데미지 25, 상대를 멀리 밀침(쿨타임 2초) | E(기본 타격) - 데미지 12 | SHIFT(불꽃) - 뜨거운 불꽃을 뿜어내어 3초간 화상 데미지 4 부여 (쿨타임 4초)[cite: 5, 9]</div>
-            <div class="skill-desc-item"><strong>박준모:</strong> Q(담배빵) - 근접 공격, 0.5초 정지 및 데미지 8(쿨타임 2.5초) | E(기본 타격) - 데미지 10 | SHIFT(도넛) - 원거리 구체 형태의 도넛 3개 발사, 맞으면 밀려남 (쿨타임 3초)[cite: 5, 6]</div>
+            <div class="skill-desc-item"><strong>박준모:</strong> Q(담배빵) - 근접 공격, 0.5초 정지 및 데미지 8(쿨타임 2.5초) | E(기본 타격) - 데미지 10 | SHIFT(도넛) - 원거리 구멍 뚫린 도넛 모양 구체 3개 발사, 맞으면 밀려남 (쿨타임 3초)[cite: 5, 6]</div>
         </div>
 
         <br>
@@ -629,10 +629,12 @@
 
             if (state.projectiles) {
                 state.projectiles.forEach(proj => {
-                    ctx.fillStyle = proj.color || '#00bcd4';
+                    ctx.strokeStyle = proj.color || '#00bcd4';
+                    ctx.lineWidth = 3;
                     ctx.beginPath();
-                    ctx.arc(proj.x, proj.y, proj.life !== undefined ? 3 : 6, 0, Math.PI * 2);
-                    ctx.fill();
+                    // 도넛 모양 (가운데 구멍이 뚫린 링 형태) 구현
+                    ctx.arc(proj.x, proj.y, 8, 0, Math.PI * 2);
+                    ctx.stroke();
                 });
             }
 
