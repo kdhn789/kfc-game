@@ -2,397 +2,713 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>캐릭터 대전 게임</title>
+    <title>KFC</title>
     <style>
         body {
-            margin: 0;
-            background: #111;
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            background-color: #222;
             color: #fff;
-            font-family: 'Malgun Gothic', sans-serif;
+            margin: 0;
+            padding-top: 20px;
+            touch-action: manipulation;
+            overflow-x: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .box {
+            background: #333;
+            padding: 30px;
+            display: inline-block;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            margin-top: 20px;
+        }
+        input, button {
+            padding: 10px;
+            font-size: 16px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        .hidden { display: none !important; }
+        .char-card {
+            display: inline-block;
+            background: #444;
+            padding: 20px;
+            margin: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 3px solid transparent;
+            width: 130px;
+        }
+        .char-card:hover { border-color: #ff9800; }
+        .selected { border-color: #4CAF50 !important; background: #2e5c31; }
+        
+        #skillInfoTab {
+            margin-top: 20px;
+            background: #2a2a2a;
+            border: 2px solid #555;
+            border-radius: 8px;
+            padding: 15px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            text-align: left;
+        }
+        #skillInfoTab h3 {
+            margin-top: 0;
+            color: #ff9800;
+            text-align: center;
+            border-bottom: 1px solid #444;
+            padding-bottom: 8px;
+        }
+        .skill-desc-item {
+            margin-bottom: 10px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        .skill-desc-item strong {
+            color: #4CAF50;
+        }
+        
+        #gameRoom {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100vh;
-            overflow: hidden;
-        }
-        #game-container {
+            width: 100%;
             position: relative;
-            width: 800px;
-            height: 400px;
-            background: #222;
+        }
+        #gameCanvas {
+            background: #111;
             border: 4px solid #fff;
             box-shadow: 0 0 20px rgba(255,255,255,0.2);
+            max-width: 100%;
+            height: auto;
         }
-        canvas {
-            display: block;
-            background: #222;
-        }
-        #ui-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-        .ui-panel {
-            display: flex;
-            justify-content: space-between;
-            width: 100%;
-        }
-        .hp-bar-container {
-            width: 300px;
-            height: 24px;
+
+        #touchSettingsBtn {
+            position: fixed;
+            top: 15px;
+            right: 15px;
             background: #444;
+            color: #fff;
             border: 2px solid #fff;
-            position: relative;
+            border-radius: 8px;
+            padding: 8px 15px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 50;
         }
-        .hp-bar {
-            width: 100%;
-            height: 100%;
-            background: #ff3333;
-            transition: width 0.1s linear;
-        }
-        .menu-screen {
+        #touchSettingsBtn:hover { background: #555; }
+        #touchSettingsBtn.active { background: #ff9800; border-color: #ff9800; }
+
+        #mobileControls {
             position: absolute;
-            top: 0;
+            bottom: 20px;
             left: 0;
             width: 100%;
-            height: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            box-sizing: border-box;
+            cursor: grab;
+        }
+        #mobileControls.customizing {
+            border: 2px dashed #ff9800;
+            background: rgba(255, 152, 0, 0.1);
+            cursor: move;
+        }
+        #mobileControls.customizing::before {
+            content: "터치 패널을 드래그해서 위치를 조절하세요 (버튼을 눌러 완료)";
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ff9800;
+            color: #000;
+            font-weight: bold;
+            padding: 3px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        #joystickArea {
+            display: flex;
+            gap: 15px;
+        }
+
+        .joystick-btn {
+            background: rgba(255, 255, 255, 0.25);
+            color: white;
+            border: 3px solid #fff;
+            border-radius: 50%;
+            font-size: 28px;
+            font-weight: bold;
+            width: 75px;
+            height: 75px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: none;
+        }
+        .joystick-btn:active { background: rgba(255, 255, 255, 0.6); }
+
+        #actionArea {
+            display: grid;
+            grid-template-columns: repeat(2, 75px);
+            grid-template-rows: repeat(2, 75px);
+            gap: 12px;
+        }
+
+        .action-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 3px solid #fff;
+            border-radius: 16px;
+            font-size: 22px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: none;
+        }
+        .action-btn:active { background: rgba(255, 255, 255, 0.5); }
+        #btn-r { background: rgba(244, 67, 54, 0.4); border-color: #f44336; font-size: 16px; }
+
+        #resultScreen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.85);
             display: flex;
             flex-direction: column;
-            align-items: center;
             justify-content: center;
-            z-index: 10;
+            align-items: center;
+            z-index: 100;
         }
-        button {
-            padding: 12px 24px;
-            font-size: 18px;
-            background: #fff;
-            border: none;
-            cursor: pointer;
-            font-weight: bold;
-            margin: 10px;
-            transition: 0.2s;
-        }
-        button:hover {
-            background: #ccc;
-        }
-        .character-select-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-            margin-top: 20px;
-        }
-        .char-card {
-            width: 100px;
-            height: 100px;
-            background: #444;
-            border: 3px solid #fff;
+        #resultTitle { font-size: 80px; font-weight: bold; margin-bottom: 20px; letter-spacing: 5px; }
+        .win-text { color: #4CAF50; text-shadow: 0 0 20px #4CAF50; }
+        .fail-text { color: #f44336; text-shadow: 0 0 20px #f44336; }
+
+        #difficultyModal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
             display: flex;
-            align-items: center;
+            flex-direction: column;
             justify-content: center;
+            align-items: center;
+            z-index: 150;
+        }
+        .diff-btn {
+            background: #444;
+            color: white;
+            border: 2px solid #ff9800;
+            padding: 15px 30px;
+            margin: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 8px;
             cursor: pointer;
-            font-weight: bold;
-            font-size: 16px;
+            width: 200px;
         }
-        .char-card:hover {
-            background: #666;
-            border-color: #ffd700;
-        }
-        #dialogue-box {
-            position: absolute;
-            font-size: 16px;
-            font-weight: bold;
-            background: rgba(0,0,0,0.7);
-            padding: 4px 8px;
-            border-radius: 4px;
-            display: none;
-        }
+        .diff-btn:hover { background: #ff9800; color: black; }
     </style>
 </head>
 <body>
 
-    <div id="game-container">
-        <!-- 초기 메인 메뉴 -->
-        <div id="main-menu" class="menu-screen">
-            <h1>캐릭터 대전 게임</h1>
-            <button onclick="startSinglePlay('normal')">싱글 플레이 시작</button>
-            <button onclick="showRoomMenu()">멀티플레이(방 참여)</button>
+    <button id="touchSettingsBtn">터치 조작 위치 설정</button>
+
+    <div id="lobby" class="box">
+        <h1>KFC 대기실</h1>
+        <p>호실 번호를 입력하세요.</p>
+        <input type="text" id="roomInput" placeholder="예: 523" maxlength="3">
+        <br>
+        <button id="joinBtn">호실 들어가기</button>
+        
+        <div style="margin-top: 15px; border-top: 1px solid #555; padding-top: 15px;">
+            <button id="jjintaPlayBtn" style="background: #ff9800; color: #000; border: none; border-radius: 5px; padding: 12px 20px; font-size: 16px; font-weight: bold; cursor: pointer;">찐따플레이</button>
         </div>
-
-        <!-- 싱글 난이도 선택 메뉴 -->
-        <div id="difficulty-menu" class="menu-screen" style="display:none;">
-            <h2>난이도 선택</h2>
-            <button onclick="selectDifficulty('easy')">쉬움</button>
-            <button onclick="selectDifficulty('normal')">보통</button>
-            <button onclick="selectDifficulty('hard')">어려움</button>
-            <button onclick="selectDifficulty('sandbag')">샌드백 (가만히 있음)</button>
-            <button onclick="backToMain()" style="background:#666; color:#fff;">뒤로 가기</button>
-        </div>
-
-        <!-- 멀티 방 참여 메뉴 -->
-        <div id="room-menu" class="menu-screen" style="display:none;">
-            <h2>멀티플레이 방 참여</h2>
-            <input type="text" id="room-input" placeholder="방 코드 입력" style="padding:10px; font-size:16px; margin-bottom:10px;">
-            <br>
-            <button onclick="joinRoom()">입장하기</button>
-            <button onclick="backToMain()" style="background:#666; color:#fff;">뒤로 가기</button>
-        </div>
-
-        <!-- 캐릭터 선택 화면 -->
-        <div id="char-select-screen" class="menu-screen" style="display:none;">
-            <h2>캐릭터를 선택하세요</h2>
-            <div class="character-select-grid" id="char-grid">
-                <!-- 동적 생성 -->
-            </div>
-        </div>
-
-        <!-- 카운트다운 화면 -->
-        <div id="countdown-screen" class="menu-screen" style="display:none;">
-            <h1 id="countdown-text" style="font-size: 60px;">3</h1>
-        </div>
-
-        <!-- 게임오버 화면 -->
-        <div id="game-over-screen" class="menu-screen" style="display:none;">
-            <h1 id="game-over-text">게임 종료</h1>
-            <button onclick="location.reload()">메인으로 돌아가기</button>
-        </div>
-
-        <!-- 게임 화면 캔버스 -->
-        <canvas id="gameCanvas" width="800" height="400"></canvas>
-
-        <!-- 인게임 상단 UI -->
-        <div id="ui-layer" style="display:none;">
-            <div class="ui-panel">
-                <div>
-                    <span id="p1-name" style="font-weight:bold;">플레이어 1</span>
-                    <div class="hp-bar-container"><div id="p1-hp" class="hp-bar"></div></div>
-                </div>
-                <div>
-                    <span id="p2-name" style="font-weight:bold; text-align:right; display:block;">플레이어 2</span>
-                    <div class="hp-bar-container"><div id="p2-hp" class="hp-bar" style="background:#33cc33;"></div></div>
-                </div>
-            </div>
-        </div>
-
-        <div id="dialogue-box"></div>
     </div>
 
-    <!-- Socket.io 클라이언트 라이브러리 -->
+    <div id="difficultyModal" class="hidden">
+        <div class="box" style="text-align: center;">
+            <h2>봇 난이도를 선택하세요</h2>
+            <button class="diff-btn" data-diff="easy">쉬움</button><br>
+            <button class="diff-btn" data-diff="normal">보통</button><br>
+            <button class="diff-btn" data-diff="hard">어려움</button><br>
+            <button class="diff-btn" data-diff="sandbag">샌드백</button><br>
+            <button id="closeDiffModal" style="background: #666; color: white; border: none; margin-top: 15px; padding: 8px 15px; border-radius: 5px; cursor: pointer;">취소</button>
+        </div>
+    </div>
+
+    <div id="waitingRoom" class="box hidden">
+        <h1>호실 번호: <span id="displayRoomCode"></span></h1>
+        <p id="statusText">상대를 기다리는 중입니다...</p>
+        <br>
+        <button id="waitExitBtn" style="background: #f44336; color: white; border: none; border-radius: 5px; padding: 8px 15px; cursor: pointer;">나가기</button>
+    </div>
+
+    <div id="charSelectRoom" class="box hidden">
+        <h1>부고아를 선택하세요!</h1>
+        <div id="charList">
+            <div class="char-card" data-char="김도현">
+                <h3>김도현</h3>
+                <p>Q: 128kg | Shift: 노출증</p>
+            </div>
+            <div class="char-card" data-char="성열진">
+                <h3>성열진</h3>
+                <p>Q: 우유 좀 줄래 | Shift: 배싸</p>
+            </div>
+            <div class="char-card" data-char="조겸">
+                <h3>조겸</h3>
+                <p>Q: 여아 겁탈 | Shift: 공주페스티벌VIP</p>
+            </div>
+            <div class="char-card" data-char="강재승">
+                <h3>강재승</h3>
+                <p>Q: 오른쪽 딸근의 지배자 | Shift: 뜨끈불가마</p>
+            </div>
+        </div>
+
+        <div id="skillInfoTab">
+            <h3>캐릭터 스킬 상세 설명</h3>
+            <div class="skill-desc-item"><strong>김도현:</strong> Q(128kg) - 체력 및 몸 크기 두 배 증가(1회용) | E(기본 타격) - 데미지 50 | SHIFT(노출증) - 체력 40% 이하 시 옷을 벗어 속도 증가(1회용)</div>
+            <div class="skill-desc-item"><strong>성열진:</strong> Q(우유 좀 줄래) - 사방으로 우유 방출(쿨타임 0.8초) | E(기본 타격) - 데미지 15 | SHIFT(배싸) - 배 위로 사정(쿨타임 5초)</div>
+            <div class="skill-desc-item"><strong>조겸:</strong> Q(여아 겁탈) - 몹시 흥분하여 대쉬(무제한) | E(기본 공격) - 데미지 15 | SHIFT(공주페스티벌VIP) - 2초간 속도 2배 증가(쿨타임 5초)</div>
+            <div class="skill-desc-item"><strong>강재승:</strong> Q(오른쪽 딸근의 지배자) - 데미지 25, 상대를 멀리 밀침(쿨타임 2초) | E(기본 타격) - 데미지 12 | SHIFT(뜨끈불가마) - 뜨끈한 불가마를 엎어 공격, 3초간 화상 데미지 4(쿨타임 4초)</div>
+        </div>
+
+        <br>
+        <button id="confirmCharBtn" disabled>부고아 확정</button>
+        <button id="charExitBtn" style="background: #f44336; color: white; border: none; border-radius: 5px; padding: 10px 15px; cursor: pointer;">나가기</button>
+        <p id="charStatusText"></p>
+    </div>
+
+    <div id="countdownRoom" class="box hidden">
+        <h1>대전이 곧 시작됩니다!</h1>
+        <h2 id="countdownNumber" style="font-size: 60px; color: #ffeb3b;">3</h2>
+        <p id="matchInfo"></p>
+    </div>
+
+    <div id="gameRoom" class="hidden">
+        <div style="display: flex; justify-content: space-between; width: 800px; align-items: center; margin-bottom: 5px;">
+            <h2 style="margin: 0;">조작키로 대결하세요!</h2>
+            <button id="gameExitBtn" style="background: #f44336; color: white; border: none; border-radius: 5px; padding: 6px 12px; font-weight: bold; cursor: pointer;">나가기</button>
+        </div>
+        <canvas id="gameCanvas" width="800" height="400"></canvas>
+        
+        <div id="mobileControls">
+            <div id="joystickArea">
+                <button class="joystick-btn" id="btn-left">◀</button>
+                <button class="joystick-btn" id="btn-right">▶</button>
+            </div>
+
+            <div id="actionArea">
+                <button class="action-btn" id="btn-jump">▲</button>
+                <button class="action-btn" id="btn-e">E</button>
+                <button class="action-btn" id="btn-q">Q</button>
+                <button class="action-btn" id="btn-r">SHIFT</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="resultScreen" class="hidden">
+        <h1 id="resultTitle">WIN</h1>
+        <button id="backToLobbyBtn" style="font-size: 20px; padding: 15px 30px; background: #fff; border: none; border-radius: 5px; font-weight: bold;">메인 화면으로 돌아가기</button>
+    </div>
+
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
 
+        const lobby = document.getElementById('lobby');
+        const waitingRoom = document.getElementById('waitingRoom');
+        const charSelectRoom = document.getElementById('charSelectRoom');
+        const countdownRoom = document.getElementById('countdownRoom');
+        const gameRoom = document.getElementById('gameRoom');
+        const resultScreen = document.getElementById('resultScreen');
+        const resultTitle = document.getElementById('resultTitle');
+        const backToLobbyBtn = document.getElementById('backToLobbyBtn');
+
+        const roomInput = document.getElementById('roomInput');
+        const joinBtn = document.getElementById('joinBtn');
+        const jjintaPlayBtn = document.getElementById('jjintaPlayBtn');
+        const difficultyModal = document.getElementById('difficultyModal');
+        const closeDiffModal = document.getElementById('closeDiffModal');
+        const diffButtons = document.querySelectorAll('.diff-btn');
+
+        const displayRoomCode = document.getElementById('displayRoomCode');
+        const statusText = document.getElementById('statusText');
+
+        const charCards = document.querySelectorAll('.char-card');
+        const confirmCharBtn = document.getElementById('confirmCharBtn');
+        const charStatusText = document.getElementById('charStatusText');
+        const countdownNumber = document.getElementById('countdownNumber');
+        const matchInfo = document.getElementById('matchInfo');
+
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
+        const waitExitBtn = document.getElementById('waitExitBtn');
+        const charExitBtn = document.getElementById('charExitBtn');
+        const gameExitBtn = document.getElementById('gameExitBtn');
+
+        const charImages = {
+            '김도현': new Image(),
+            '김도현_각성': new Image(),
+            '성열진': new Image(),
+            '조겸': new Image(),
+            '강재승': new Image(),
+        };
+        charImages['김도현'].src = './images/kimdohyun.png';
+        charImages['김도현_각성'].src = './images/kimdohyun_awakened.png';
+        charImages['성열진'].src = './images/seongyeoljin.png';
+        charImages['조겸'].src = './images/jogyum.png';
+        charImages['강재승'].src = './images/kangjaeseung.png';
+
+        let currentRoom = '';
+        let selectedCharacter = null;
         let keys = { left: false, right: false, jump: false, skill: false, qSkill: false, rSkill: false };
-        let myId = null;
+        let gameInterval = null;
 
-        // 화면 전환 함수들
-        function showRoomMenu() {
-            document.getElementById('main-menu').style.display = 'none';
-            document.getElementById('room-menu').style.display = 'flex';
+        const mobileControls = document.getElementById('mobileControls');
+        const touchSettingsBtn = document.getElementById('touchSettingsBtn');
+        let isCustomizing = false;
+
+        const savedPos = localStorage.getItem('kfc_touch_pos');
+        if (savedPos) {
+            try {
+                const pos = JSON.parse(savedPos);
+                mobileControls.style.bottom = pos.bottom;
+                mobileControls.style.left = pos.left;
+                mobileControls.style.transform = pos.transform || 'none';
+            } catch(e) {}
         }
-        function startSinglePlay(diff) {
-            socket.emit('start-single-play', diff);
-        }
-        function selectDifficulty(diff) {
-            startSinglePlay(diff);
-        }
-        function backToMain() {
-            document.getElementById('difficulty-menu').style.display = 'none';
-            document.getElementById('room-menu').style.display = 'none';
-            document.getElementById('main-menu').style.display = 'flex';
-        }
-        function joinRoom() {
-            const roomCode = document.getElementById('room-input').value;
-            if (roomCode) {
-                socket.emit('join-room', roomCode);
-                document.getElementById('room-menu').style.display = 'none';
+
+        touchSettingsBtn.addEventListener('click', () => {
+            isCustomizing = !isCustomizing;
+            if (isCustomizing) {
+                touchSettingsBtn.innerText = '위치 저장 완료';
+                touchSettingsBtn.classList.add('active');
+                mobileControls.classList.add('customizing');
+            } else {
+                touchSettingsBtn.innerText = '터치 조작 위치 설정';
+                touchSettingsBtn.classList.remove('active');
+                mobileControls.classList.remove('customizing');
+                
+                localStorage.setItem('kfc_touch_pos', JSON.stringify({
+                    bottom: mobileControls.style.bottom,
+                    left: mobileControls.style.left,
+                    transform: mobileControls.style.transform
+                }));
             }
+        });
+
+        let isDragging = false;
+        let dragStartX = 0, dragStartY = 0;
+
+        mobileControls.addEventListener('mousedown', (e) => {
+            if (!isCustomizing) return;
+            isDragging = true;
+            dragStartX = e.clientX - mobileControls.offsetLeft;
+            dragStartY = e.clientY - mobileControls.offsetTop;
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging || !isCustomizing) return;
+            const newLeft = e.clientX - dragStartX;
+            const newTop = e.clientY - dragStartY;
+            mobileControls.style.left = `${newLeft}px`;
+            mobileControls.style.top = `${newTop}px`;
+            mobileControls.style.bottom = 'auto';
+            mobileControls.style.transform = 'none';
+        });
+
+        window.addEventListener('mouseup', () => { isDragging = false; });
+
+        mobileControls.addEventListener('touchstart', (e) => {
+            if (!isCustomizing) return;
+            isDragging = true;
+            const touch = e.touches[0];
+            dragStartX = touch.clientX - mobileControls.offsetLeft;
+            dragStartY = touch.clientY - mobileControls.offsetTop;
+        });
+
+        window.addEventListener('touchmove', (e) => {
+            if (!isDragging || !isCustomizing) return;
+            const touch = e.touches[0];
+            const newLeft = touch.clientX - dragStartX;
+            const newTop = touch.clientY - dragStartY;
+            mobileControls.style.left = `${newLeft}px`;
+            mobileControls.style.top = `${newTop}px`;
+            mobileControls.style.bottom = 'auto';
+            mobileControls.style.transform = 'none';
+        });
+
+        window.addEventListener('touchend', () => { isDragging = false; });
+
+        window.addEventListener('keydown', (e) => {
+            if (gameRoom.classList.contains('hidden')) return;
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
+            if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') keys.jump = true;
+            if (e.code === 'KeyE') keys.skill = true;
+            if (e.code === 'KeyQ') keys.qSkill = true;
+            if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+                e.preventDefault();
+                keys.rSkill = true;
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (gameRoom.classList.contains('hidden')) return;
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
+            if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') keys.jump = false;
+            if (e.code === 'KeyE') keys.skill = false;
+            if (e.code === 'KeyQ') keys.qSkill = false;
+            if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') keys.rSkill = false;
+        });
+
+        function bindTouchButton(id, keyName, isHold = true) {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+
+            btn.addEventListener('touchstart', (e) => {
+                if (isCustomizing) return;
+                e.preventDefault();
+                keys[keyName] = true;
+            });
+            btn.addEventListener('touchend', (e) => {
+                if (isCustomizing) return;
+                e.preventDefault();
+                if (isHold) keys[keyName] = false;
+            });
+            btn.addEventListener('mousedown', (e) => {
+                if (isCustomizing) return;
+                keys[keyName] = true;
+            });
+            btn.addEventListener('mouseup', (e) => {
+                if (isCustomizing) return;
+                if (isHold) keys[keyName] = false;
+            });
         }
 
-        socket.on('start-character-select', () => {
-            document.querySelectorAll('.menu-screen').forEach(el => el.style.display = 'none');
-            document.getElementById('char-select-screen').style.display = 'flex';
+        bindTouchButton('btn-left', 'left', true);
+        bindTouchButton('btn-right', 'right', true);
+        bindTouchButton('btn-jump', 'jump', true);
+        bindTouchButton('btn-e', 'skill', false);
+        bindTouchButton('btn-q', 'qSkill', false);
+        bindTouchButton('btn-r', 'rSkill', false);
 
-            const grid = document.getElementById('char-grid');
-            grid.innerHTML = '';
-            
-            // 캐릭터 목록 (필요에 따라 확장 가능)
-            const chars = ['김도현', '성열진']; 
-            chars.forEach(charName => {
-                const card = document.createElement('div');
-                card.className = 'char-card';
-                card.innerText = charName;
-                card.onclick = () => {
-                    socket.emit('select-character', charName);
-                    document.getElementById('char-select-screen').style.display = 'none';
-                };
-                grid.appendChild(card);
+        function enterRoom() {
+            const roomCode = roomInput.value;
+            if (roomCode.length !== 3) {
+                alert('3자리 숫자를 입력해주세요!');
+                return;
+            }
+            currentRoom = roomCode;
+            socket.emit('join-room', roomCode);
+            lobby.classList.add('hidden');
+            waitingRoom.classList.remove('hidden');
+            displayRoomCode.innerText = currentRoom;
+        }
+
+        joinBtn.addEventListener('click', enterRoom);
+        roomInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') enterRoom();
+        });
+
+        jjintaPlayBtn.addEventListener('click', () => {
+            difficultyModal.classList.remove('hidden');
+        });
+
+        closeDiffModal.addEventListener('click', () => {
+            difficultyModal.classList.add('hidden');
+        });
+
+        diffButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const diff = btn.getAttribute('data-diff');
+                difficultyModal.classList.add('hidden');
+                lobby.classList.add('hidden');
+                socket.emit('start-single-play', diff);
             });
         });
 
-        socket.on('start-countdown', (players) => {
-            document.querySelectorAll('.menu-screen').forEach(el => el.style.display = 'none');
-            const countdownScreen = document.getElementById('countdown-screen');
-            countdownScreen.style.display = 'flex';
-            document.getElementById('ui-layer').style.display = 'flex';
+        function returnToLobby() {
+            window.location.reload();
+        }
+        waitExitBtn.addEventListener('click', returnToLobby);
+        charExitBtn.addEventListener('click', returnToLobby);
+        gameExitBtn.addEventListener('click', returnToLobby);
 
-            let count = 3;
-            const textEl = document.getElementById('countdown-text');
-            textEl.innerText = count;
+        socket.on('update-room', (count) => {
+            statusText.innerText = `현재 호실 인원: ${count}명 (상대를 기다리는 중...)`;
+        });
+
+        socket.on('start-character-select', () => {
+            waitingRoom.classList.add('hidden');
+            charSelectRoom.classList.remove('hidden');
+        });
+
+        charCards.forEach(card => {
+            card.addEventListener('click', () => {
+                charCards.forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                selectedCharacter = card.getAttribute('data-char');
+                confirmCharBtn.disabled = false;
+            });
+        });
+
+        confirmCharBtn.addEventListener('click', () => {
+            if (!selectedCharacter) return;
+            confirmCharBtn.disabled = true;
+            charCards.forEach(c => c.style.pointerEvents = 'none');
+            charStatusText.innerText = `[${selectedCharacter}] 선택 완료! 게임 시작 준비 중...`;
+            socket.emit('select-character', selectedCharacter);
+        });
+
+        socket.on('start-countdown', () => {
+            charSelectRoom.classList.add('hidden');
+            countdownRoom.classList.remove('hidden');
+            matchInfo.innerText = `대전이 시작됩니다!`;
+
+            let timeLeft = 3;
+            countdownNumber.innerText = timeLeft;
 
             const timer = setInterval(() => {
-                count--;
-                if (count > 0) {
-                    textEl.innerText = count;
-                } else if (count === 0) {
-                    textEl.innerText = '시작!';
-                } else {
+                timeLeft--;
+                countdownNumber.innerText = timeLeft;
+
+                if (timeLeft <= 0) {
                     clearInterval(timer);
-                    countdownScreen.style.display = 'none';
+                    countdownRoom.classList.add('hidden');
+                    gameRoom.classList.remove('hidden');
+                    initGameLoop();
                 }
             }, 1000);
         });
 
-        // 키 입력 리스너
-        window.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = true;
-            if (e.key === 'ArrowRight' || e.key === 'd') keys.right = true;
-            if (e.key === 'ArrowUp' || e.key === 'w' || e.key === ' ') keys.jump = true;
-            if (e.key === 'f' || e.key === 'F') keys.skill = true;
-            if (e.key === 'q' || e.key === 'Q') keys.qSkill = true;
-            if (e.key === 'Shift') keys.rSkill = true;
-        });
-
-        window.addEventListener('keyup', (e) => {
-            if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = false;
-            if (e.key === 'ArrowRight' || e.key === 'd') keys.right = false;
-            if (e.key === 'ArrowUp' || e.key === 'w' || e.key === ' ') keys.jump = false;
-            if (e.key === 'f' || e.key === 'F') keys.skill = false;
-            if (e.key === 'q' || e.key === 'Q') keys.qSkill = false;
-            if (e.key === 'Shift') keys.rSkill = false;
-        });
-
-        // 주기적으로 서버에 입력 전송
-        setInterval(() => {
-            if (socket.connected) {
+        function initGameLoop() {
+            gameInterval = setInterval(() => {
                 socket.emit('player-input', keys);
-            }
-        }, 1000 / 60);
+                if (keys.skill) keys.skill = false;
+                if (keys.qSkill) keys.qSkill = false;
+                if (keys.rSkill) keys.rSkill = false;
+            }, 1000 / 60);
+        }
 
-        // 게임 루프 업데이트 처리
         socket.on('game-update', (state) => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
             ctx.save();
+            
             if (state.screenShake > 0) {
-                const shakeX = (Math.random() - 0.5) * state.screenShake;
-                const shakeY = (Math.random() - 0.5) * state.screenShake;
+                const shakeX = (Math.random() - 0.5) * state.screenShake * 1.5;
+                const shakeY = (Math.random() - 0.5) * state.screenShake * 1.5;
                 ctx.translate(shakeX, shakeY);
             }
 
-            // 바닥 그리기
-            ctx.fillStyle = '#444';
-            ctx.fillRect(0, 340, 800, 60);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // 플레이어들 그리기
-            for (let id in state.players) {
-                const p = state.players[id];
-                
-                // 본인 ID 저장
-                if (!myId && id === socket.id) myId = id;
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, 340);
+            ctx.lineTo(800, 340);
+            ctx.stroke();
 
-                ctx.fillStyle = (id === socket.id) ? '#3498db' : '#e74c3c';
-                ctx.fillRect(p.x, p.y, p.width, p.height);
-
-                // 공격 이펙트 표시
-                if (p.isAttacking) {
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-                    const attX = p.facing === 'right' ? p.x + p.width : p.x - 40;
-                    ctx.fillRect(attX, p.y, 40, p.height);
-                }
-
-                // HP바 업데이트
-                if (id === socket.id) {
-                    document.getElementById('p1-hp').style.width = Math.max(0, (p.hp / p.maxHp) * 100) + '%';
-                    document.getElementById('p1-name').innerText = (p.char || '미선택') + ' (나)';
-                } else {
-                    document.getElementById('p2-hp').style.width = Math.max(0, (p.hp / p.maxHp) * 100) + '%';
-                    document.getElementById('p2-name').innerText = (p.char || '미선택') + ' (상대)';
-                }
-
-                // 대화 말풍선 처리
-                if (p.dialogue && p.dialogue !== '') {
-                    const dBox = document.getElementById('dialogue-box');
-                    dBox.innerText = p.dialogue;
-                    dBox.style.display = 'block';
-                    dBox.style.left = (p.x + p.width / 2 - 30) + 'px';
-                    dBox.style.top = (p.y - 30) + 'px';
-                }
-            }
-
-            // 투사체 렌더링 (원기둥 창 및 페이드 아웃 효과 적용)[cite: 4]
             if (state.projectiles) {
                 state.projectiles.forEach(proj => {
-                    ctx.save();
-                    if (proj.life !== undefined && proj.maxLife) {
-                        ctx.globalAlpha = proj.life / proj.maxLife;
-                    }
-
                     ctx.fillStyle = proj.color || '#00bcd4';
+                    ctx.beginPath();
+                    ctx.arc(proj.x, proj.y, proj.life !== undefined ? 3 : 6, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            }
 
-                    if (proj.isSpear) {
-                        // 원기둥 형태의 굵고 긴 창 렌더링
-                        ctx.beginPath();
-                        const radius = proj.height / 2;
-                        ctx.roundRect(proj.x, proj.y, proj.width, proj.height, radius);
-                        ctx.fill();
-                        
-                        // 창 앞부분 디테일
-                        ctx.fillStyle = '#fff';
-                        if (proj.vx > 0) {
-                            ctx.fillRect(proj.x + proj.width - 10, proj.y + 2, 10, proj.height - 4);
-                        } else {
-                            ctx.fillRect(proj.x, proj.y + 2, 10, proj.height - 4);
-                        }
+            for (let id in state.players) {
+                const p = state.players[id];
+
+                if (p.isDead) {
+                    ctx.fillStyle = '#777';
+                    ctx.fillRect(p.x + 5, p.y + 10, 30, 30);
+                    ctx.fillStyle = '#ff5722';
+                    ctx.font = '12px Arial';
+                    ctx.fillText('R.I.P', p.x + 5, p.y - 5);
+                } else {
+                    let imgKey = p.char;
+                    if (p.char === '김도현' && p.hasUsedAwaken) {
+                        imgKey = '김도현_각성';
+                    }
+                    const img = charImages[imgKey];
+                    
+                    if (img && img.complete && img.naturalWidth !== 0) {
+                        ctx.drawImage(img, p.x, p.y, p.width, p.height);
                     } else {
-                        // 일반 투사체
-                        ctx.beginPath();
-                        ctx.arc(proj.x, proj.y, proj.life !== undefined ? 3 : 6, 0, Math.PI * 2);
-                        ctx.fill();
+                        ctx.fillStyle = (id === socket.id) ? '#4CAF50' : '#f44336';
+                        ctx.fillRect(p.x, p.y, p.width, p.height);
                     }
 
-                    ctx.restore();
-                });
+                    // ⭐ 내 캐릭터는 초록색, 상대방/봇은 빨간색 외곽선 적용
+                    if (id === socket.id) {
+                        ctx.strokeStyle = '#2ecc71'; // 초록색 (내 캐릭터)
+                    } else {
+                        ctx.strokeStyle = '#e74c3c'; // 빨간색 (상대방/봇)
+                    }
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(p.x, p.y, p.width, p.height);
+
+                    if (p.isAttacking) {
+                        ctx.fillStyle = '#ffeb3b';
+                        const punchX = p.facing === 'right' ? p.x + p.width : p.x - 30;
+                        ctx.fillRect(punchX, p.y + (p.height / 2) - 15, 30, 30);
+                    }
+
+                    ctx.fillStyle = '#fff';
+                    ctx.font = '14px Arial';
+                    const displayName = id === 'bot' ? `[BOT] ${p.char}` : p.char;
+                    ctx.fillText(`${displayName} (HP: ${Math.round(p.hp)}/${p.maxHp})`, p.x - 10, p.y - 15);
+
+                    if (p.dialogue && p.dialogueTimer > 0) {
+                        ctx.fillStyle = '#ffeb3b';
+                        ctx.font = 'bold 14px Arial';
+                        ctx.fillText(p.dialogue, p.x - 10, p.y - 32);
+                    }
+                }
             }
 
             ctx.restore();
         });
 
         socket.on('game-over', (data) => {
-            document.getElementById('ui-layer').style.display = 'none';
-            const overScreen = document.getElementById('game-over-screen');
-            overScreen.style.display = 'flex';
-            
-            const text = document.getElementById('game-over-text');
+            clearInterval(gameInterval);
+            gameRoom.classList.add('hidden');
+            resultScreen.classList.remove('hidden');
+
             if (data.winner === socket.id) {
-                text.innerText = '승리하셨습니다!';
-            } else if (data.winner === null) {
-                text.innerText = '상대방이 나갔습니다.';
+                resultTitle.innerText = 'WIN';
+                resultTitle.className = 'win-text';
             } else {
-                text.innerText = '패배했습니다...';
+                resultTitle.innerText = 'FAIL';
+                resultTitle.className = 'fail-text';
             }
+        });
+
+        backToLobbyBtn.addEventListener('click', () => {
+            resultScreen.classList.add('hidden');
+            lobby.classList.remove('hidden');
+            roomInput.value = '';
+            selectedCharacter = null;
+            
+            confirmCharBtn.disabled = true;
+            charCards.forEach(c => {
+                c.classList.remove('selected');
+                c.style.pointerEvents = 'auto';
+            });
+            charStatusText.innerText = '';
         });
     </script>
 </body>
