@@ -13,7 +13,7 @@ module.exports = {
             const totalBullets = 8;
             for (let i = 0; i < totalBullets; i++) {
                 const angle = (i * (360 / totalBullets)) * (Math.PI / 180);
-                const speed = 7;
+                const speed = 10;
                 room.projectiles.push({
                     x: p.x + (p.width / 2),
                     y: p.y + (p.height / 2),
