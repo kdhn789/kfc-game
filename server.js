@@ -1,4 +1,4 @@
-// server_4.js
+// server_5.js
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -408,7 +408,7 @@ function startGameLoop(roomCode) {
                 if (p.x > 800 - p.width) p.x = 800 - p.width;
             }
 
-            // [최적화 추가] 매 프레임 플레이어 체력 상태를 검사하여 0 이하일 시 즉시 루프 종료 및 결과 전송
+            // [핵심 수정] 강율을 포함해 체력이 0 이하가 된 플레이어가 발생하면 즉시 게임오버 이벤트 송신 및 루프 탈출
             for (let id in room.players) {
                 const p = room.players[id];
                 if (!p.isDead && p.hp <= 0) {
