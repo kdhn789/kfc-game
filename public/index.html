@@ -630,11 +630,11 @@
             if (state.projectiles) {
                 state.projectiles.forEach(proj => {
                     ctx.beginPath();
-                    // 박준모의 도넛만 구멍이 뚫린 링(외곽선) 형태로 그리고, 나머지는 기존 채워진 원으로 유지
+                    // 박준모가 발사한 도넛(proj.char === '박준모' 또는 명시된 타입)만 링 모양으로 렌더링
                     if (proj.char === '박준모' || proj.type === 'donut') {
                         ctx.strokeStyle = proj.color || '#ff9800';
                         ctx.lineWidth = 3;
-                        ctx.arc(proj.x, proj.y, 8, 0, Math.PI * 2);
+                        ctx.arc(proj.x, proj.y, 9, 0, Math.PI * 2);
                         ctx.stroke();
                     } else {
                         ctx.fillStyle = proj.color || '#00bcd4';
