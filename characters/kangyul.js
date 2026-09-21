@@ -4,13 +4,22 @@ module.exports = {
     hp: 100,
     speed: 8,
     jumpPower: -15,
-    meleeDamage: 15,
+    meleeDamage: 17,
     scale: 1.0,
     image: './images/kangyul.png',
 
-    // Q 스킬: 율스트라이크
+    // Q 스킬: 율스트라이크 (쿨타임 4초 및 대사 추가)
     onQSkill: (p, room, socketId) => {
         if (room.status !== 'playing') return;
+
+        const now = Date.now();
+        if (p.lastQSkillTime && now - p.lastQSkillTime < 4000) return;
+        p.lastQSkillTime = now;
+
+        // 대사 설정
+        p.dialogue = "내 폐!";
+        p.dialogueTimer = 90; // 대사 유지 시간
+
         p.isAttacking = true;
         setTimeout(() => { p.isAttacking = false; }, 200);
 
@@ -39,10 +48,18 @@ module.exports = {
         }
     },
 
-    // SHIFT(R) 스킬: 무빙포즈 (자폭 방지 및 게임 종료 상태 체크 추가)
+    // SHIFT(R) 스킬: 무빙포즈 (쿨타임 4초 및 대사 추가)
     onRSkill: (p, room, socketId) => {
         if (room.status !== 'playing') return;
-        
+
+        const now = Date.now();
+        if (p.lastRSkillTime && now - p.lastRSkillTime < 4000) return;
+        p.lastRSkillTime = now;
+
+        // 대사 설정
+        p.dialogue = "내 심장!";
+        p.dialogueTimer = 90;
+
         for (let id in room.players) {
             if (id !== socketId) {
                 const enemy = room.players[id];
@@ -72,7 +89,7 @@ module.exports = {
         }
     },
 
-    // 기본 공격(E): 오타(height) 수정 및 게임 상태 체크 추가
+    // 기본 공격(E)
     onMeleeSkill: (p, room, socketId) => {
         if (room.status !== 'playing') return;
 
@@ -99,7 +116,6 @@ module.exports = {
                     height: p.height
                 };
 
-                // 수정된 부분: enemy.height 참조 오류 해결
                 if (attackBox.x < enemy.x + enemy.width &&
                     attackBox.x + attackBox.width > enemy.x &&
                     attackBox.y < enemy.y + enemy.height &&
