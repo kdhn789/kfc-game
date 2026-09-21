@@ -1,7 +1,7 @@
 module.exports = {
     name: '성열진',
     hp: 152.3,
-    speed: 7,
+    speed: 10,
     jumpPower: -11,
     meleeDamage: 15,
     image: './images/seongyeoljin.png',
@@ -32,7 +32,7 @@ module.exports = {
         const now = Date.now();
         if (!p.lastRSkillTime || now - p.lastRSkillTime >= 5000) {
             p.lastRSkillTime = now;
-            const totalBullets = 25;
+            const totalBullets = 16;
             for (let i = 0; i < totalBullets; i++) {
                 // 위쪽 방향으로 화산처럼 퍼지도록 각도 조절 (-180도 ~ 0도 사이 포물선)
                 const angle = (Math.random() * 140 + 200) * (Math.PI / 180); 
