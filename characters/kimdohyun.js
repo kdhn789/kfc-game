@@ -7,24 +7,68 @@ module.exports = {
     image: './images/kimdohyun.png',
     scale: 1.4,
 
-    // Q 스킬: 앞으로 구르기 (느리고 웃긴 구르기)
+    // E 스킬 (김도현 전용 근접 공격 - 2초 쿨타임)
+    onMeleeSkill: (p, room, socketId) => {
+        const now = Date.now();
+        const cooldown = 2000; // 2초 쿨타임
+
+        if (!p.lastMeleeTime || now - p.lastMeleeTime >= cooldown) {
+            p.lastMeleeTime = now;
+
+            p.isAttacking = true;
+            setTimeout(() => { p.isAttacking = false; }, 200);
+
+            for (let id in room.players) {
+                if (id !== socketId) {
+                    const enemy = room.players[id];
+                    if (enemy.isDead) continue;
+
+                    const attackBox = {
+                        x: p.facing === 'right' ? p.x + p.width : p.x - 40,
+                        y: p.y,
+                        width: 40,
+                        height: p.height
+                    };
+
+                    if (attackBox.x < enemy.x + enemy.width &&
+                        attackBox.x + attackBox.width > enemy.x &&
+                        attackBox.y < enemy.y + enemy.height &&
+                        attackBox.y + enemy.height > enemy.y) {
+                        
+                        if (!(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
+                            enemy.hp -= 20;
+                        }
+                        
+                        const knockDir = p.facing === 'right' ? 1 : -1;
+                        enemy.x += knockDir * 40; 
+                        room.screenShake = 10; 
+
+                        if (enemy.hp <= 0 && !(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
+                            enemy.hp = 0;
+                            enemy.isDead = true;
+                            room.status = 'ended';
+                            // 게임 종료 처리 필요시 연동
+                        }
+                    }
+                }
+            }
+            p.dialogue = "받아라!";
+            p.dialogueTimer = 40;
+        }
+    },
+
+    // Q 스킬: 앞으로 구르기
     onQSkill: (p, room, socketId) => {
         const now = Date.now();
         const cooldown = 300;
 
         if (!p.lastQSkillTime || now - p.lastQSkillTime >= cooldown) {
             p.lastQSkillTime = now;
-
             const dir = p.facing === 'right' ? 1 : -1;
-            
-            // 앞으로 툭 굴러가는 속도 부여 (느리게 구름)
             p.vx = dir * 7;
-            p.vy = -3; // 살짝 뜸
-
+            p.vy = -3; 
             p.dialogue = "앞구르기";
             p.dialogueTimer = 60;
-
-            // 구르는 동안 이동 속도 및 판정 처리 (잠깐 동안)
             p.isRolling = true;
             setTimeout(() => {
                 p.isRolling = false;
@@ -33,23 +77,18 @@ module.exports = {
         }
     },
 
-    // R 스킬: 뒤로 구르기 (느리고 웃긴 후퇴)
+    // R 스킬: 뒤로 구르기
     onRSkill: (p, room, socketId) => {
         const now = Date.now();
         const cooldown = 300;
 
         if (!p.lastRSkillTime || now - p.lastRSkillTime >= cooldown) {
             p.lastRSkillTime = now;
-            
-            // 바라보는 방향의 반대(뒤쪽)로 굴러감
             const backDir = p.facing === 'right' ? -1 : 1;
-
             p.vx = backDir * 7;
-            p.vy = -3; // 살짝 뜸
-
+            p.vy = -3; 
             p.dialogue = "뒤구르기";
             p.dialogueTimer = 60;
-
             p.isRolling = true;
             setTimeout(() => {
                 p.isRolling = false;

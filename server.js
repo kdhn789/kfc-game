@@ -54,8 +54,9 @@ io.on('connection', (socket) => {
             facing: 'right',
             skillLogic: null,
             rSkillLogic: null,
+            meleeLogic: null,
             meleeDamage: 15,
-            hasUsedGrow: false, hasUsedAwaken: false, lastRangedTime: 0, lastRSkillTime: 0,
+            hasUsedGrow: false, hasUsedAwaken: false, lastRangedTime: 0, lastRSkillTime: 0, lastMeleeTime: 0,
             dialogue: '',       
             dialogueTimer: 0,
             burnTimer: 0, 
@@ -75,8 +76,9 @@ io.on('connection', (socket) => {
             facing: 'left',
             skillLogic: botStat.onQSkill || null,
             rSkillLogic: botStat.onRSkill || null,
+            meleeLogic: botStat.onMeleeSkill || null,
             meleeDamage: botStat.meleeDamage || 10,
-            hasUsedGrow: false, hasUsedAwaken: false, lastRangedTime: 0, lastRSkillTime: 0,
+            hasUsedGrow: false, hasUsedAwaken: false, lastRangedTime: 0, lastRSkillTime: 0, lastMeleeTime: 0,
             lastQSkillTime: 0,
             dialogue: '',       
             dialogueTimer: 0,
@@ -123,8 +125,9 @@ io.on('connection', (socket) => {
             facing: playerKeys.length === 0 ? 'right' : 'left',
             skillLogic: null,
             rSkillLogic: null,
+            meleeLogic: null,
             meleeDamage: 15,
-            hasUsedGrow: false, hasUsedAwaken: false, lastRangedTime: 0, lastRSkillTime: 0,
+            hasUsedGrow: false, hasUsedAwaken: false, lastRangedTime: 0, lastRSkillTime: 0, lastMeleeTime: 0,
             dialogue: '',       
             dialogueTimer: 0,
             burnTimer: 0, 
@@ -175,6 +178,7 @@ io.on('connection', (socket) => {
             p.skillLogic = stat.onQSkill;
             p.rSkillLogic = stat.onRSkill;
             p.rReleaseLogic = stat.onRRelease; 
+            p.meleeLogic = stat.onMeleeSkill; // 캐릭터 전용 근접 공격/쿨타임 함수 연동
             if (stat.meleeDamage) p.meleeDamage = stat.meleeDamage;
 
             const scale = stat.scale || 1.0;
@@ -219,40 +223,45 @@ io.on('connection', (socket) => {
         if (keys.jump && p.y >= 300) { p.vy = p.jumpPower; }
 
         if (keys.skill) {
-            p.isAttacking = true;
-            setTimeout(() => { p.isAttacking = false; }, 200);
+            // 캐릭터 전용 근접 공격 로직(김도현의 2초 쿨타임 등)이 있으면 위임, 없으면 일반 기본 공격 실행
+            if (p.meleeLogic) {
+                p.meleeLogic(p, rooms[roomCode], socket.id);
+            } else {
+                p.isAttacking = true;
+                setTimeout(() => { p.isAttacking = false; }, 200);
 
-            const room = rooms[roomCode];
-            for (let id in room.players) {
-                if (id !== socket.id) {
-                    const enemy = room.players[id];
-                    if (enemy.isDead) continue;
+                const room = rooms[roomCode];
+                for (let id in room.players) {
+                    if (id !== socket.id) {
+                        const enemy = room.players[id];
+                        if (enemy.isDead) continue;
 
-                    const attackBox = {
-                        x: p.facing === 'right' ? p.x + p.width : p.x - 40,
-                        y: p.y,
-                        width: 40,
-                        height: p.height
-                    };
+                        const attackBox = {
+                            x: p.facing === 'right' ? p.x + p.width : p.x - 40,
+                            y: p.y,
+                            width: 40,
+                            height: p.height
+                        };
 
-                    if (attackBox.x < enemy.x + enemy.width &&
-                        attackBox.x + attackBox.width > enemy.x &&
-                        attackBox.y < enemy.y + enemy.height &&
-                        attackBox.y + enemy.height > enemy.y) {
-                        
-                        if (!(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
-                            enemy.hp -= p.meleeDamage;
-                        }
-                        
-                        const knockDir = p.facing === 'right' ? 1 : -1;
-                        enemy.x += knockDir * 40; 
-                        room.screenShake = 10; 
+                        if (attackBox.x < enemy.x + enemy.width &&
+                            attackBox.x + attackBox.width > enemy.x &&
+                            attackBox.y < enemy.y + enemy.height &&
+                            attackBox.y + enemy.height > enemy.y) {
+                            
+                            if (!(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
+                                enemy.hp -= p.meleeDamage;
+                            }
+                            
+                            const knockDir = p.facing === 'right' ? 1 : -1;
+                            enemy.x += knockDir * 40; 
+                            room.screenShake = 10; 
 
-                        if (enemy.hp <= 0 && !(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
-                            enemy.hp = 0;
-                            enemy.isDead = true;
-                            room.status = 'ended';
-                            io.to(roomCode).emit('game-over', { winner: socket.id });
+                            if (enemy.hp <= 0 && !(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
+                                enemy.hp = 0;
+                                enemy.isDead = true;
+                                room.status = 'ended';
+                                io.to(roomCode).emit('game-over', { winner: socket.id });
+                            }
                         }
                     }
                 }

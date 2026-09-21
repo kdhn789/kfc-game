@@ -68,7 +68,7 @@ module.exports = {
                     y: p.y,
                     vx: Math.cos(angle) * speed,
                     vy: Math.sin(angle) * speed,
-                    gravity: 0.3, // 포물선 중력
+                    gravity: 0.2, // 포물선 중력
                     owner: socketId,
                     color: '#ff4500' // 뜨거운 주황/빨간 불꽃 색상
                 });
