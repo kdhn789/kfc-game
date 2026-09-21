@@ -1,11 +1,11 @@
 module.exports = {
     name: '박준모',
     hp: 170,
-    speed: 3,
-    jumpPower: -9,
+    speed: 10,
+    jumpPower: -13,
     meleeDamage: 10,
     image: './images/parkjunmo.png', // 추후 준비될 이미지 경로
-    scale: 1.4,
+    scale: 1,
 
     // Q 스킬: 담배빵 (근접 공격, 0.5초 정지 및 데미지 8)
     onQSkill: (p, room, socketId) => {
