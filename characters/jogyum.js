@@ -1,6 +1,6 @@
 module.exports = {
     name: '조겸',
-    hp: 120,
+    hp: 110,
     speed: 8,
     jumpPower: -13,
     meleeDamage: 15,
