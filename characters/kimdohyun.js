@@ -10,7 +10,7 @@ module.exports = {
     // Q 스킬: 앞으로 구르기 (느리고 웃긴 구르기)
     onQSkill: (p, room, socketId) => {
         const now = Date.now();
-        const cooldown = 2500;
+        const cooldown = 300;
 
         if (!p.lastQSkillTime || now - p.lastQSkillTime >= cooldown) {
             p.lastQSkillTime = now;
@@ -36,7 +36,7 @@ module.exports = {
     // R 스킬: 뒤로 구르기 (느리고 웃긴 후퇴)
     onRSkill: (p, room, socketId) => {
         const now = Date.now();
-        const cooldown = 3000;
+        const cooldown = 300;
 
         if (!p.lastRSkillTime || now - p.lastRSkillTime >= cooldown) {
             p.lastRSkillTime = now;
