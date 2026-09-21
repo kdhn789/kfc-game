@@ -1,3 +1,4 @@
+// server_4.js
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -390,6 +391,8 @@ function startGameLoop(roomCode) {
                             room.status = 'ended';
                             const killerId = Object.keys(room.players).find(k => k !== id);
                             io.to(roomCode).emit('game-over', { winner: killerId });
+                            clearInterval(room.gameInterval);
+                            return;
                         }
                     }
                 }
@@ -403,6 +406,20 @@ function startGameLoop(roomCode) {
 
                 if (p.x < 0) p.x = 0;
                 if (p.x > 800 - p.width) p.x = 800 - p.width;
+            }
+
+            // [최적화 추가] 매 프레임 플레이어 체력 상태를 검사하여 0 이하일 시 즉시 루프 종료 및 결과 전송
+            for (let id in room.players) {
+                const p = room.players[id];
+                if (!p.isDead && p.hp <= 0) {
+                    p.hp = 0;
+                    p.isDead = true;
+                    room.status = 'ended';
+                    const killerId = Object.keys(room.players).find(k => k !== id);
+                    io.to(roomCode).emit('game-over', { winner: killerId });
+                    clearInterval(room.gameInterval);
+                    return;
+                }
             }
 
             if (playerIds.length === 2) {
@@ -425,7 +442,7 @@ function startGameLoop(roomCode) {
                 }
             }
 
-            // 투사체 이동 및 피격 판정 (knockback 처리 포함)
+            // 투사체 이동 및 피격 판정
             for (let i = room.projectiles.length - 1; i >= 0; i--) {
                 const proj = room.projectiles[i];
                 
@@ -465,7 +482,6 @@ function startGameLoop(roomCode) {
                                 enemy.hp -= (proj.damage || (proj.isSpear ? 30 : 6)); 
                             }
                             
-                            // 도넛 등 투사체 피격 시 밀려남(knockback) 처리
                             if (proj.knockback) {
                                 const knockDir = proj.vx > 0 ? 1 : -1;
                                 enemy.x += knockDir * proj.knockback;
@@ -481,6 +497,8 @@ function startGameLoop(roomCode) {
                                 enemy.isDead = true;
                                 room.status = 'ended';
                                 io.to(roomCode).emit('game-over', { winner: proj.owner });
+                                clearInterval(room.gameInterval);
+                                return;
                             }
                             break;
                         }
