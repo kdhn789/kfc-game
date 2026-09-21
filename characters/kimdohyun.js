@@ -3,14 +3,14 @@ module.exports = {
     hp: 180,
     speed: 2,
     jumpPower: -8,
-    meleeDamage: 20,
+    meleeDamage: 40,
     image: './images/kimdohyun.png',
     scale: 1.4,
 
     // E 스킬 (김도현 전용 근접 공격 - 2초 쿨타임)
     onMeleeSkill: (p, room, socketId) => {
         const now = Date.now();
-        const cooldown = 2000; // 2초 쿨타임
+        const cooldown = 3000; // 2초 쿨타임
 
         if (!p.lastMeleeTime || now - p.lastMeleeTime >= cooldown) {
             p.lastMeleeTime = now;
@@ -52,7 +52,7 @@ module.exports = {
                     }
                 }
             }
-            p.dialogue = "받아라!";
+            p.dialogue = "야이ㅂㅅ아";
             p.dialogueTimer = 40;
         }
     },
