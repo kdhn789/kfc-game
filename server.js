@@ -178,7 +178,7 @@ io.on('connection', (socket) => {
             p.skillLogic = stat.onQSkill;
             p.rSkillLogic = stat.onRSkill;
             p.rReleaseLogic = stat.onRRelease; 
-            p.meleeLogic = stat.onMeleeSkill; // 캐릭터 전용 근접 공격/쿨타임 함수 연동
+            p.meleeLogic = stat.onMeleeSkill; 
             if (stat.meleeDamage) p.meleeDamage = stat.meleeDamage;
 
             const scale = stat.scale || 1.0;
@@ -223,7 +223,6 @@ io.on('connection', (socket) => {
         if (keys.jump && p.y >= 300) { p.vy = p.jumpPower; }
 
         if (keys.skill) {
-            // 캐릭터 전용 근접 공격 로직(김도현의 2초 쿨타임 등)이 있으면 위임, 없으면 일반 기본 공격 실행
             if (p.meleeLogic) {
                 p.meleeLogic(p, rooms[roomCode], socket.id);
             } else {
@@ -426,7 +425,7 @@ function startGameLoop(roomCode) {
                 }
             }
 
-            // 투사체 이동 및 피격 판정 수정 부분
+            // 투사체 이동 및 피격 판정 (knockback 처리 포함)
             for (let i = room.projectiles.length - 1; i >= 0; i--) {
                 const proj = room.projectiles[i];
                 
@@ -449,7 +448,6 @@ function startGameLoop(roomCode) {
                     continue;
                 }
 
-                // 투사체 크기(width, height) 기본값 보정 (설정되지 않은 경우 에러 방지)
                 const pWidth = proj.width || 15;
                 const pHeight = proj.height || 15;
 
@@ -467,6 +465,14 @@ function startGameLoop(roomCode) {
                                 enemy.hp -= (proj.damage || (proj.isSpear ? 30 : 6)); 
                             }
                             
+                            // 도넛 등 투사체 피격 시 밀려남(knockback) 처리
+                            if (proj.knockback) {
+                                const knockDir = proj.vx > 0 ? 1 : -1;
+                                enemy.x += knockDir * proj.knockback;
+                                if (enemy.x < 0) enemy.x = 0;
+                                if (enemy.x > 800 - enemy.width) enemy.x = 800 - enemy.width;
+                            }
+
                             room.screenShake = 6; 
                             room.projectiles.splice(i, 1);
 

@@ -271,14 +271,19 @@
                 <h3>강재승</h3>
                 <p>Q: 오른쪽 딸근의 지배자 | Shift: 뜨끈불가마</p>
             </div>
+            <div class="char-card" data-char="박준모">
+                <h3>박준모</h3>
+                <p>Q: 담배빵 | Shift: 도넛</p>
+            </div>
         </div>
 
         <div id="skillInfoTab">
             <h3>캐릭터 스킬 상세 설명</h3>
-            <div class="skill-desc-item"><strong>김도현:</strong> Q(앞구르기) - 앞으로 구른다 | E(기본 타격) - 데미지 40 | SHIFT(뒤구르기) - 뒤로 구른다</div>
-            <div class="skill-desc-item"><strong>성열진:</strong> Q(우유 좀 줄래) - 사방으로 우유 방출(쿨타임 0.8초) | E(기본 타격) - 데미지 15 | SHIFT(배싸) - 배 위로 사정(쿨타임 5초)</div>
-            <div class="skill-desc-item"><strong>조겸:</strong> Q(여아 겁탈) - 몹시 흥분하여 대쉬(무제한) | E(기본 공격) - 데미지 15 | SHIFT(공주페스티벌VIP) - 2초간 속도 2배 증가(쿨타임 5초)</div>
-            <div class="skill-desc-item"><strong>강재승:</strong> Q(오른쪽 딸근의 지배자) - 데미지 25, 상대를 멀리 밀침(쿨타임 2초) | E(기본 타격) - 데미지 12 | SHIFT(뜨끈불가마) - 뜨끈한 불가마를 엎어 공격, 3초간 화상 데미지 4(쿨타임 4초)</div>
+            <div class="skill-desc-item"><strong>김도현:</strong> Q(앞구르기) - 앞으로 구른다 | E(기본 타격) - 데미지 40 | SHIFT(뒤구르기) - 뒤로 구른다[cite: 5, 10]</div>
+            <div class="skill-desc-item"><strong>성열진:</strong> Q(우유 좀 줄래) - 사방으로 우유 방출(쿨타임 0.8초) | E(기본 타격) - 데미지 15 | SHIFT(배싸) - 배 위로 사정(쿨타임 5초)[cite: 5, 7]</div>
+            <div class="skill-desc-item"><strong>조겸:</strong> Q(여아 겁탈) - 몹시 흥분하여 대쉬(무제한) | E(기본 공격) - 데미지 15 | SHIFT(공주페스티벌VIP) - 2초간 속도 2배 증가(쿨타임 5초)[cite: 5, 8]</div>
+            <div class="skill-desc-item"><strong>강재승:</strong> Q(오른쪽 딸근의 지배자) - 데미지 25, 상대를 멀리 밀침(쿨타임 2초) | E(기본 타격) - 데미지 12 | SHIFT(뜨끈불가마) - 뜨끈한 불가마를 엎어 공격, 3초간 화상 데미지 4(쿨타임 4초)[cite: 5, 9]</div>
+            <div class="skill-desc-item"><strong>박준모:</strong> Q(담배빵) - 근접 공격, 0.5초 정지 및 데미지 8(쿨타임 2.5초) | E(기본 타격) - 데미지 10 | SHIFT(도넛) - 원거리 구체 3개 발사, 맞으면 밀려남(쿨타임 3초)[cite: 5, 6]</div>
         </div>
 
         <br>
@@ -362,12 +367,14 @@
             '성열진': new Image(),
             '조겸': new Image(),
             '강재승': new Image(),
+            '박준모': new Image(),
         };
         charImages['김도현'].src = './images/kimdohyun.png';
         charImages['김도현_각성'].src = './images/kimdohyun_awakened.png';
         charImages['성열진'].src = './images/seongyeoljin.png';
         charImages['조겸'].src = './images/jogyum.png';
         charImages['강재승'].src = './images/kangjaeseung.png';
+        charImages['박준모'].src = './images/parkjunmo.png';
 
         let currentRoom = '';
         let selectedCharacter = null;
@@ -652,11 +659,10 @@
                         ctx.fillRect(p.x, p.y, p.width, p.height);
                     }
 
-                    // ⭐ 내 캐릭터는 초록색, 상대방/봇은 빨간색 외곽선 적용
                     if (id === socket.id) {
-                        ctx.strokeStyle = '#2ecc71'; // 초록색 (내 캐릭터)
+                        ctx.strokeStyle = '#2ecc71';
                     } else {
-                        ctx.strokeStyle = '#e74c3c'; // 빨간색 (상대방/봇)
+                        ctx.strokeStyle = '#e74c3c';
                     }
                     ctx.lineWidth = 3;
                     ctx.strokeRect(p.x, p.y, p.width, p.height);
