@@ -388,6 +388,9 @@
         let keys = { left: false, right: false, jump: false, skill: false, qSkill: false, rSkill: false };
         let gameInterval = null;
 
+        // [데미지 텍스트 관리용 배열]
+        let floatingDamageTexts = [];
+
         const mobileControls = document.getElementById('mobileControls');
         const touchSettingsBtn = document.getElementById('touchSettingsBtn');
         let isCustomizing = false;
@@ -616,6 +619,19 @@
             }, 1000 / 60);
         }
 
+        // 수동으로 데미지 텍스트를 생성하는 헬퍼 함수 (필요시 프론트 로직에서 호출 가능)
+        function spawnDamageText(x, y, text, color = '#ff4757') {
+            floatingDamageTexts.push({
+                x: x + (Math.random() * 20 - 10),
+                y: y,
+                text: text,
+                color: color,
+                alpha: 1.0,
+                vy: -1.5,
+                life: 30 // 30프레임 동안 유지
+            });
+        }
+
         socket.on('game-update', (state) => {
             ctx.save();
             
@@ -697,6 +713,34 @@
                         ctx.font = 'bold 14px Arial';
                         ctx.fillText(p.dialogue, p.x - 10, p.y - 32);
                     }
+                }
+            }
+
+            // 서버에서 데미지 텍스트 리스트를 넘겨주는 경우 자동 동기화 지원
+            if (state.damageTexts) {
+                state.damageTexts.forEach(dt => {
+                    spawnDamageText(dt.x, dt.y, `-${dt.damage}`, dt.color || '#ff4757');
+                });
+            }
+
+            // [데미지 텍스트 렌더링 및 업데이트 루프]
+            for (let i = floatingDamageTexts.length - 1; i >= 0; i--) {
+                let dt = floatingDamageTexts[i];
+                ctx.save();
+                ctx.globalAlpha = dt.alpha;
+                ctx.fillStyle = dt.color;
+                ctx.font = 'bold 18px Arial';
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 3;
+                ctx.strokeText(dt.text, dt.x, dt.y);
+                ctx.fillText(dt.text, dt.x, dt.y);
+                ctx.restore();
+
+                dt.y += dt.vy;
+                dt.alpha -= 1 / dt.life;
+
+                if (dt.alpha <= 0 || dt.life <= 0) {
+                    floatingDamageTexts.splice(i, 1);
                 }
             }
 

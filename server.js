@@ -1,4 +1,4 @@
-// server_5.js
+// server_6.js 기반 수정
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -28,13 +28,13 @@ const rooms = {};
 io.on('connection', (socket) => {
     console.log(`사용자 접속: ${socket.id}`);
 
-    // 싱글 플레이 시작 요청 처리 (난이도 포함)
     socket.on('start-single-play', (difficulty) => {
         const roomCode = 'single_' + socket.id;
         
         rooms[roomCode] = { 
             players: {}, 
             projectiles: [], 
+            floatingTexts: [], // 데미지 텍스트 배열 추가
             screenShake: 0, 
             status: 'waiting',
             gameInterval: null,
@@ -46,7 +46,6 @@ io.on('connection', (socket) => {
         socket.roomCode = roomCode;
         socket.isReady = true;
 
-        // 플레이어 생성
         rooms[roomCode].players[socket.id] = {
             x: 100, y: 300, width: 40, height: 40,
             vx: 0, vy: 0, hp: 100, maxHp: 100,
@@ -64,7 +63,6 @@ io.on('connection', (socket) => {
             burnTicks: 0  
         };
 
-        // 봇 캐릭터 생성 (상대방 ID: 'bot')
         const botCharKeys = Object.keys(CHARACTER_STATS);
         const randomBotChar = botCharKeys.length > 0 ? botCharKeys[Math.floor(Math.random() * botCharKeys.length)] : '성열진';
         const botStat = CHARACTER_STATS[randomBotChar] || { hp: 100, speed: 3, jumpPower: -12, meleeDamage: 10 };
@@ -89,7 +87,6 @@ io.on('connection', (socket) => {
             botTimer: 0
         };
 
-        // 바로 캐릭터 선택 화면으로 전환 신호 전송
         socket.emit('start-character-select');
     });
 
@@ -98,6 +95,7 @@ io.on('connection', (socket) => {
             rooms[roomCode] = { 
                 players: {}, 
                 projectiles: [], 
+                floatingTexts: [], 
                 screenShake: 0, 
                 status: 'waiting',
                 gameInterval: null
@@ -198,7 +196,6 @@ io.on('connection', (socket) => {
 
         if (allSelected && room.status !== 'playing' && room.status !== 'waiting_countdown') {
             room.status = 'waiting_countdown'; 
-            
             io.to(roomCode).emit('start-countdown', room.players);
             
             setTimeout(() => {
@@ -250,18 +247,18 @@ io.on('connection', (socket) => {
                             
                             if (!(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
                                 enemy.hp -= p.meleeDamage;
+                                // 데미지 텍스트 추가
+                                room.floatingTexts.push({
+                                    x: enemy.x + enemy.width / 2,
+                                    y: enemy.y,
+                                    text: `-${p.meleeDamage}`,
+                                    life: 30
+                                });
                             }
                             
                             const knockDir = p.facing === 'right' ? 1 : -1;
                             enemy.x += knockDir * 40; 
                             room.screenShake = 10; 
-
-                            if (enemy.hp <= 0 && !(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
-                                enemy.hp = 0;
-                                enemy.isDead = true;
-                                room.status = 'ended';
-                                io.to(roomCode).emit('game-over', { winner: socket.id });
-                            }
                         }
                     }
                 }
@@ -308,6 +305,18 @@ function startGameLoop(roomCode) {
         }
 
         if (room.screenShake > 0) room.screenShake--;
+
+        // 플로팅 텍스트 위치 및 수명 업데이트
+        if (room.floatingTexts) {
+            for (let i = room.floatingTexts.length - 1; i >= 0; i--) {
+                const ft = room.floatingTexts[i];
+                ft.y -= 1; // 위로 떠오름
+                ft.life--;
+                if (ft.life <= 0) {
+                    room.floatingTexts.splice(i, 1);
+                }
+            }
+        }
 
         if (room.status === 'playing') {
             if (room.isSingle && room.players['bot']) {
@@ -384,16 +393,12 @@ function startGameLoop(roomCode) {
                         p.burnTimer = 0;
                         p.hp -= 2; 
                         p.burnTicks--;
-                        
-                        if (p.hp <= 0) {
-                            p.hp = 0;
-                            p.isDead = true;
-                            room.status = 'ended';
-                            const killerId = Object.keys(room.players).find(k => k !== id);
-                            io.to(roomCode).emit('game-over', { winner: killerId });
-                            clearInterval(room.gameInterval);
-                            return;
-                        }
+                        room.floatingTexts.push({
+                            x: p.x + p.width / 2,
+                            y: p.y,
+                            text: `-2`,
+                            life: 30
+                        });
                     }
                 }
 
@@ -408,7 +413,7 @@ function startGameLoop(roomCode) {
                 if (p.x > 800 - p.width) p.x = 800 - p.width;
             }
 
-            // [핵심 수정] 강율을 포함해 체력이 0 이하가 된 플레이어가 발생하면 즉시 게임오버 이벤트 송신 및 루프 탈출
+            // 체력 검사 및 게임오버 처리
             for (let id in room.players) {
                 const p = room.players[id];
                 if (!p.isDead && p.hp <= 0) {
@@ -478,8 +483,15 @@ function startGameLoop(roomCode) {
                             proj.y < enemy.y + enemy.height &&
                             proj.y + pHeight > enemy.y) {
                             
+                            const dmg = proj.damage || (proj.isSpear ? 30 : 6);
                             if (!(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
-                                enemy.hp -= (proj.damage || (proj.isSpear ? 30 : 6)); 
+                                enemy.hp -= dmg;
+                                room.floatingTexts.push({
+                                    x: enemy.x + enemy.width / 2,
+                                    y: enemy.y,
+                                    text: `-${dmg}`,
+                                    life: 30
+                                });
                             }
                             
                             if (proj.knockback) {
@@ -491,15 +503,6 @@ function startGameLoop(roomCode) {
 
                             room.screenShake = 6; 
                             room.projectiles.splice(i, 1);
-
-                            if (enemy.hp <= 0 && !(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
-                                enemy.hp = 0;
-                                enemy.isDead = true;
-                                room.status = 'ended';
-                                io.to(roomCode).emit('game-over', { winner: proj.owner });
-                                clearInterval(room.gameInterval);
-                                return;
-                            }
                             break;
                         }
                     }
@@ -510,6 +513,7 @@ function startGameLoop(roomCode) {
         io.to(roomCode).emit('game-update', {
             players: room.players,
             projectiles: room.projectiles,
+            floatingTexts: room.floatingTexts, // 텍스트 전송
             screenShake: room.screenShake
         });
 
