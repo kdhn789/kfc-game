@@ -1,11 +1,11 @@
 module.exports = {
     name: '김도현',
     hp: 180,
-    speed: 2.5,
+    speed: 2,
     jumpPower: -8,
     meleeDamage: 40,
     image: './images/kimdohyun.png',
-    scale: 1.5,
+    scale: 1.4,
 
     // Q 스킬: 앞으로 구르기 (느리고 웃긴 구르기)
     onQSkill: (p, room, socketId) => {
@@ -18,7 +18,7 @@ module.exports = {
             const dir = p.facing === 'right' ? 1 : -1;
             
             // 앞으로 툭 굴러가는 속도 부여 (느리게 구름)
-            p.vx = dir * 6;
+            p.vx = dir * 7;
             p.vy = -3; // 살짝 뜸
 
             p.dialogue = "앞구르기";
@@ -44,7 +44,7 @@ module.exports = {
             // 바라보는 방향의 반대(뒤쪽)로 굴러감
             const backDir = p.facing === 'right' ? -1 : 1;
 
-            p.vx = backDir * 6;
+            p.vx = backDir * 7;
             p.vy = -3; // 살짝 뜸
 
             p.dialogue = "뒤구르기";
