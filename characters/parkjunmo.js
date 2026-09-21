@@ -50,7 +50,7 @@ module.exports = {
                                 enemy.speed = originalSpeed;
                                 enemy.isStunned = false;
                             }
-                        }, 500); // 0.5초
+                        }, 2000); // 0.5초
 
                         room.screenShake = 5;
 
@@ -98,7 +98,7 @@ module.exports = {
                         height: donutHeight,  // 도넛 높이 크기
                         damage: 5,            // 도넛 데미지
                         isDonut: true,        // 도넛 식별 플래그
-                        knockback: 30         // 맞았을 때 밀려나는 거리 (추후 조정 가능)
+                        knockback: 60         // 맞았을 때 밀려나는 거리 (추후 조정 가능)
                     });
                 }, i * 150);
             }
