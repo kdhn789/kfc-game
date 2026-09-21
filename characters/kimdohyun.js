@@ -1,7 +1,7 @@
 module.exports = {
     name: '김도현',
     hp: 180,
-    speed: 6,
+    speed: 2.5,
     jumpPower: -8,
     meleeDamage: 40,
     image: './images/kimdohyun.png',
@@ -19,7 +19,7 @@ module.exports = {
             
             // 앞으로 툭 굴러가는 속도 부여 (느리게 구름)
             p.vx = dir * 6;
-            p.vy = -4; // 살짝 뜸
+            p.vy = -3; // 살짝 뜸
 
             p.dialogue = "앞구르기";
             p.dialogueTimer = 60;
@@ -45,7 +45,7 @@ module.exports = {
             const backDir = p.facing === 'right' ? -1 : 1;
 
             p.vx = backDir * 6;
-            p.vy = -4; // 살짝 뜸
+            p.vy = -3; // 살짝 뜸
 
             p.dialogue = "뒤구르기";
             p.dialogueTimer = 60;
