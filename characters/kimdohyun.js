@@ -3,7 +3,7 @@ module.exports = {
     hp: 180,
     speed: 2,
     jumpPower: -8,
-    meleeDamage: 40,
+    meleeDamage: 20,
     image: './images/kimdohyun.png',
     scale: 1.4,
 
