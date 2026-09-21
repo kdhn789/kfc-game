@@ -716,10 +716,10 @@
                 }
             }
 
-            // 서버에서 데미지 텍스트 리스트를 넘겨주는 경우 자동 동기화 지원
-            if (state.damageTexts) {
-                state.damageTexts.forEach(dt => {
-                    spawnDamageText(dt.x, dt.y, `-${dt.damage}`, dt.color || '#ff4757');
+            // 서버에서 floatingTexts를 보내주므로 이를 받아 처리하도록 수정
+            if (state.floatingTexts) {
+                state.floatingTexts.forEach(ft => {
+                    spawnDamageText(ft.x, ft.y, ft.text, ft.color || '#ff4757');
                 });
             }
 
