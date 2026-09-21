@@ -7,65 +7,54 @@ module.exports = {
     image: './images/kimdohyun.png',
     scale: 1.5,
 
-    // Q 스킬: 길고 두꺼운 원기둥 형태의 창 발사
+    // Q 스킬: 앞으로 구르기 (느리고 웃긴 구르기)
     onQSkill: (p, room, socketId) => {
         const now = Date.now();
-        const cooldown = 3000;
+        const cooldown = 2500;
 
         if (!p.lastQSkillTime || now - p.lastQSkillTime >= cooldown) {
             p.lastQSkillTime = now;
 
             const dir = p.facing === 'right' ? 1 : -1;
-            const projX = dir === 1 ? p.x + p.width : p.x - 80;
-            const projY = p.y + p.height / 2 - 12;
+            
+            // 앞으로 툭 굴러가는 속도 부여 (느리게 구름)
+            p.vx = dir * 6;
+            p.vy = -4; // 살짝 뜸
 
-            room.projectiles.push({
-                x: projX,
-                y: projY,
-                vx: dir * 14,
-                vy: 0,
-                width: 80,  // 창의 길이
-                height: 20, // 창의 두께 (원기둥 느낌)
-                color: '#ffd700',
-                owner: socketId,
-                isSpear: true,
-                life: 30,
-                maxLife: 30 // 페이드 아웃 계산용
-            });
-
-            p.dialogue = "ㅈ집들에게 전해~";
+            p.dialogue = "앞구르기";
             p.dialogueTimer = 60;
+
+            // 구르는 동안 이동 속도 및 판정 처리 (잠깐 동안)
+            p.isRolling = true;
+            setTimeout(() => {
+                p.isRolling = false;
+                p.vx = 0;
+            }, 600);
         }
     },
 
-    // R 스킬: 공주 페스티벌 (속도 25로 2초간 폭주 질주 + 파티클 폭발, 쿨타임 8초)
+    // R 스킬: 뒤로 구르기 (느리고 웃긴 후퇴)
     onRSkill: (p, room, socketId) => {
         const now = Date.now();
-        if (!p.lastRSkillTime || now - p.lastRSkillTime >= 5000) {
+        const cooldown = 3000;
+
+        if (!p.lastRSkillTime || now - p.lastRSkillTime >= cooldown) {
             p.lastRSkillTime = now;
             
-            const originalSpeed = p.speed;
-            p.speed = 24; // 속도 25로 폭주
-            p.dialogue = "자숙중";
-            p.dialogueTimer = 120;
+            // 바라보는 방향의 반대(뒤쪽)로 굴러감
+            const backDir = p.facing === 'right' ? -1 : 1;
 
-            // 분홍색 파티클 폭발 생성 (시각적 효과용 투사체 활용)
-            for (let i = 0; i < 12; i++) {
-                room.projectiles.push({
-                    x: p.x + (p.width / 2),
-                    y: p.y + (p.height / 2),
-                    vx: (Math.random() - 0.5) * 10,
-                    vy: (Math.random() - 0.5) * 10,
-                    life: 30, // 금방 사라지는 파티클
-                    owner: socketId,
-                    color: '#64623f' // 핫핑크 파티클
-                });
-            }
+            p.vx = backDir * 6;
+            p.vy = -4; // 살짝 뜸
 
-            // 2초 뒤 속도 복구
+            p.dialogue = "뒤구르기";
+            p.dialogueTimer = 60;
+
+            p.isRolling = true;
             setTimeout(() => {
-                p.speed = originalSpeed;
-            }, 2000);
+                p.isRolling = false;
+                p.vx = 0;
+            }, 600);
         }
     }
 };
