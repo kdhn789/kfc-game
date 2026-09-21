@@ -3,7 +3,7 @@ module.exports = {
     hp: 170,          // 묵직한 체력
     speed: 4.5,
     jumpPower: -11,
-    meleeDamage: 10,
+    meleeDamage: 13,
     image: './images/kangjaeseung.png', // 캐릭터 이미지 파일 경로
 
     // Q 스킬: 밀치기 (데미지 10, 멀리 넉백, 쿨타임 2초)
@@ -68,7 +68,7 @@ module.exports = {
                     y: p.y,
                     vx: Math.cos(angle) * speed,
                     vy: Math.sin(angle) * speed,
-                    gravity: 0.2, // 포물선 중력
+                    gravity: 0.3, // 포물선 중력
                     owner: socketId,
                     color: '#ff4500' // 뜨거운 주황/빨간 불꽃 색상
                 });
