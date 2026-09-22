@@ -3,7 +3,7 @@ module.exports = {
     name: '강율',
     hp: 100,
     speed: 8,
-    jumpPower: -20,
+    jumpPower: -13,
     meleeDamage: 17,
     scale: 1.0,
     image: './images/kangyul.png',
@@ -13,7 +13,7 @@ module.exports = {
         if (room.status !== 'playing') return;
 
         const now = Date.now();
-        if (p.lastQSkillTime && now - p.lastQSkillTime < 4000) return; // 쿨타임 4초
+        if (p.lastQSkillTime && now - p.lastQSkillTime < 8000) return; // 쿨타임 4초
         p.lastQSkillTime = now;
 
         p.dialogue = "의사 선생님!!!";
@@ -50,7 +50,7 @@ module.exports = {
         p.lastRSkillTime = now;
 
         p.dialogue = "내 폐!";
-        p.dialogueTimer = 90;
+        p.dialogueTimer = 100;
 
         const dashDir = p.facing === 'right' ? 1 : -1;
         p.x += dashDir * 140;
@@ -66,7 +66,6 @@ module.exports = {
                 vy: (Math.random() - 0.5) * 6,
                 color: '#ae1f1f',
                 type: 'particle',
-                life: 20
             });
         }
     },
@@ -110,7 +109,6 @@ module.exports = {
                             y: enemy.y,
                             text: `-${p.meleeDamage}`,
                             color: '#be2431',
-                            life: 30
                         });
                     }
                     
