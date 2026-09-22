@@ -248,7 +248,6 @@
         }
         .diff-btn:hover { background: #ff9800; color: black; }
 
-        /* 대기 중인 호실 리스트 스타일 */
         #roomListContainer {
             margin-top: 20px;
             border-top: 1px solid #555;
@@ -300,7 +299,6 @@
             <button id="jjintaPlayBtn" style="background: #ff9800; color: #000; border: none; border-radius: 5px; padding: 12px 20px; font-size: 16px; font-weight: bold; cursor: pointer;">찐따플레이</button>
         </div>
 
-        <!-- 대기 중인 방 목록 영역 -->
         <div id="roomListContainer">
             <h3 style="margin: 0 0 10px 0; font-size: 15px; color: #ff9800; text-align: center;">대기 중인 호실 목록</h3>
             <div id="roomList">
@@ -354,6 +352,10 @@
                 <h3>강율</h3>
                 <p>Q: 의사 호출 | Shift: 폐 터뜨리기</p>
             </div>
+            <div class="char-card" data-char="노관휘">
+                <h3>노관휘</h3>
+                <p>Q: 드럼통 | Shift: 너고아니?</p>
+            </div>
         </div>
 
         <div id="skillInfoTab">
@@ -364,6 +366,7 @@
             <div class="skill-desc-item"><strong>강재승:</strong> Q(오른쪽 딸근의 지배자) - 데미지 25, 상대를 멀리 밀침(쿨타임 2초) | E(기본 타격) - 데미지 12 | SHIFT(불꽃) - 뜨거운 불꽃을 뿜어내어 3초간 화상 데미지 4 부여 (쿨타임 4초)</div>
             <div class="skill-desc-item"><strong>박준모:</strong> Q(담배빵) - 근접 공격, 0.5초 정지 및 데미지 8(쿨타임 2.5초) | E(기본 타격) - 데미지 10 | SHIFT(도넛) - 원거리 구멍 뚫린 도넛 모양 구체 3개 발사, 맞으면 밀려남 (쿨타임 3초)</div>
             <div class="skill-desc-item"><strong>강율:</strong> Q(의사 호출) - 청록색 십자가와 페이드아웃, 체력 20 회복 (쿨타임 4초) | E(기본 타격, 공격 시 피 1 감소) - 데미지 17 | SHIFT(폐 터뜨리기) - 빨간색 파티클을 흘리며 앞으로 대쉬</div>
+            <div class="skill-desc-item"><strong>노관휘:</strong> Q(드럼통) - 파란트럼통에 상대를 가두어 3초간 이동 불가 (쿨타임 3초) | E(기본 타격) - 데미지 12 | SHIFT(너고아니?) - 상대방을 맵 맨 끝으로 밀어내기 (쿨타임 2초)</div>
         </div>
 
         <br>
@@ -441,7 +444,6 @@
         const charExitBtn = document.getElementById('charExitBtn');
         const gameExitBtn = document.getElementById('gameExitBtn');
 
-        // 대기실 목록 엘리먼트 추가
         const roomListEl = document.getElementById('roomList');
 
         const charImages = {
@@ -452,6 +454,7 @@
             '강재승': new Image(),
             '박준모': new Image(),
             '강율': new Image(),
+            '노관휘': new Image(),
         };
         charImages['김도현'].src = './images/kimdohyun.png';
         charImages['김도현_각성'].src = './images/kimdohyun_awakened.png';
@@ -460,6 +463,7 @@
         charImages['강재승'].src = './images/kangjaeseung.png';
         charImages['박준모'].src = './images/parkjunmo.png';
         charImages['강율'].src = './images/kangyul.png';
+        charImages['노관휘'].src = './images/nohgwanhwi.png';
 
         let currentRoom = '';
         let selectedCharacter = null;
@@ -642,7 +646,6 @@
             statusText.innerText = `현재 호실 인원: ${count}명 (상대를 기다리는 중...)`;
         });
 
-        // 대기 중인 방 목록 실시간 수신 및 렌더링
         socket.on('room-list-update', (waitingRooms) => {
             roomListEl.innerHTML = '';
             if (waitingRooms.length === 0) {
@@ -661,7 +664,6 @@
             });
         });
 
-        // 목록에서 참가 버튼 클릭 시 동작
         window.joinSpecificRoom = function(roomCode) {
             currentRoom = roomCode;
             socket.emit('join-room', roomCode);

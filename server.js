@@ -160,10 +160,10 @@ io.on('connection', (socket) => {
         };
 
         io.to(roomCode).emit('update-room', Object.keys(room.players).length);
-        broadcastRoomList(); // 방 인원이 채워지거나 생성되면 목록 갱신
+        broadcastRoomList(); 
         
         if (Object.keys(room.players).length === 2) {
-            room.status = 'playing_prep'; // 매칭 완료 상태로 변경하여 목록에서 제외
+            room.status = 'playing_prep'; 
             broadcastRoomList();
             io.to(roomCode).emit('start-ready-phase');
             io.to(roomCode).emit('start-character-select');
@@ -433,7 +433,6 @@ function startGameLoop(roomCode) {
                 if (p.x > 800 - p.width) p.x = 800 - p.width;
             }
 
-            // 게임 오버 체크 및 승자 판정 (체력 0 이하 감지 시 정상적으로 이벤트 전송 및 종료)
             for (let id in room.players) {
                 const p = room.players[id];
                 if (!p.isDead && p.hp <= 0) {
@@ -468,7 +467,6 @@ function startGameLoop(roomCode) {
                 }
             }
 
-            // 투사체 및 파티클 이동 처리
             for (let i = room.projectiles.length - 1; i >= 0; i--) {
                 const proj = room.projectiles[i];
                 
