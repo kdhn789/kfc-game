@@ -7,7 +7,7 @@ module.exports = {
     image: './images/nohgwanhwi.png',
     scale: 1,
 
-    // Q 스킬: 드럼통 (노란색 범위 표시 및 파란색 드럼통 사각형으로 상대 속박)
+    // Q 스킬: 드럼통 (노란색 범위 표시 및 더 진하고 선명한 푸른색 드럼통 사각형으로 상대 속박 및 공격 금지)
     onQSkill: (p, room, socketId) => {
         const now = Date.now();
         const cooldown = 3000; // 3초 쿨타임
@@ -18,7 +18,6 @@ module.exports = {
             p.dialogue = "드럼통에 들어가시기";
             p.dialogueTimer = 40;
 
-            // E스킬(기본 공격 범위)처럼 Q스킬 시전 시 잠시 노란색 범위 이펙트 표시
             p.isQAttacking = true;
             setTimeout(() => { p.isQAttacking = false; }, 200);
 
@@ -48,13 +47,14 @@ module.exports = {
                         enemy.speed = 0;
                         enemy.vx = 0;
                         enemy.isTrapped = true;
-                        enemy.isDrumTrapped = true; // 파란색 드럼통 렌더링 플래그
+                        enemy.isDrumTrapped = true; 
+                        enemy.isSilenced = true; // 드럼통에 갇힌 동안 공격 불가 상태 부여
 
                         room.floatingTexts.push({
                             x: enemy.x + enemy.width / 2,
                             y: enemy.y,
-                            text: "속박!",
-                            color: '#0700d4',
+                            text: "속박 & 공격 불가!",
+                            color: '#0055ff',
                             life: 40
                         });
 
@@ -63,18 +63,19 @@ module.exports = {
                                 enemy.speed = originalSpeed;
                                 enemy.isTrapped = false;
                                 enemy.isDrumTrapped = false;
+                                enemy.isSilenced = false;
                             }
-                        }, 3000); // 3초 속박
+                        }, 3000); // 3초 속박 및 공격 불가
                     }
                 }
             }
         }
     },
 
-    // SHIFT 스킬: 너고아니? (상대방을 맵 맨 끝으로 밀어내기, 쿨타임 2초)
+    // SHIFT 스킬: 너고아니?
     onRSkill: (p, room, socketId) => {
         const now = Date.now();
-        const cooldown = 2000; // 2초 쿨타임
+        const cooldown = 2000;
 
         if (!p.lastRSkillTime || now - p.lastRSkillTime >= cooldown) {
             p.lastRSkillTime = now;

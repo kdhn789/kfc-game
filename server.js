@@ -85,7 +85,8 @@ io.on('connection', (socket) => {
             dialogue: '',       
             dialogueTimer: 0,
             burnTimer: 0, 
-            burnTicks: 0  
+            burnTicks: 0,
+            isSilenced: false  
         };
 
         const botCharKeys = Object.keys(CHARACTER_STATS);
@@ -108,6 +109,7 @@ io.on('connection', (socket) => {
             dialogueTimer: 0,
             burnTimer: 0, 
             burnTicks: 0,
+            isSilenced: false,
             isBot: true,
             botTimer: 0
         };
@@ -156,7 +158,8 @@ io.on('connection', (socket) => {
             dialogue: '',       
             dialogueTimer: 0,
             burnTimer: 0, 
-            burnTicks: 0  
+            burnTicks: 0,
+            isSilenced: false  
         };
 
         io.to(roomCode).emit('update-room', Object.keys(room.players).length);
@@ -249,7 +252,8 @@ io.on('connection', (socket) => {
 
         if (keys.jump && p.y >= 300) { p.vy = p.jumpPower; }
 
-        if (keys.skill) {
+        // 드럼통 등에 갇혀 공격 불가 상태(isSilenced)인 경우 E, Q, SHIFT 공격을 수행하지 못하도록 함
+        if (keys.skill && !p.isSilenced) {
             if (p.meleeLogic) {
                 p.meleeLogic(p, rooms[roomCode], socket.id);
             } else {
@@ -295,11 +299,11 @@ io.on('connection', (socket) => {
             }
         }
 
-        if (keys.qSkill && p.skillLogic) {
+        if (keys.qSkill && p.skillLogic && !p.isSilenced) {
             p.skillLogic(p, rooms[roomCode], socket.id);
         }
 
-        if (keys.rSkill) {
+        if (keys.rSkill && !p.isSilenced) {
             if (p.rSkillLogic) {
                 p.rSkillLogic(p, rooms[roomCode], socket.id);
             }
@@ -377,14 +381,14 @@ function startGameLoop(roomCode) {
                         const rCooldown = 2000;
                         const skillChance = diff === 'hard' ? 0.04 : 0.015;
                         
-                        if (bot.skillLogic && Math.random() < skillChance) {
+                        if (bot.skillLogic && Math.random() < skillChance && !bot.isSilenced) {
                             if (!bot.lastQSkillTime || now - bot.lastQSkillTime >= qCooldown) {
                                 bot.skillLogic(bot, room, 'bot');
                                 bot.lastQSkillTime = now;
                             }
                         }
 
-                        if (bot.rSkillLogic && Math.random() < (skillChance * 0.7)) {
+                        if (bot.rSkillLogic && Math.random() < (skillChance * 0.7) && !bot.isSilenced) {
                             if (!bot.lastRSkillTime || now - bot.lastRSkillTime >= rCooldown) {
                                 bot.rSkillLogic(bot, room, 'bot');
                                 bot.lastRSkillTime = now;
