@@ -1,4 +1,4 @@
-// server_4.js 기반 수정
+// server_5.js
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -243,7 +243,7 @@ io.on('connection', (socket) => {
                         if (attackBox.x < enemy.x + enemy.width &&
                             attackBox.x + attackBox.width > enemy.x &&
                             attackBox.y < enemy.y + enemy.height &&
-                            attackBox.y + attackBox.height > enemy.y) {
+                            attackBox.y + enemy.height > enemy.y) {
                             
                             if (!(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
                                 enemy.hp -= p.meleeDamage;
@@ -269,8 +269,10 @@ io.on('connection', (socket) => {
             p.skillLogic(p, rooms[roomCode], socket.id);
         }
 
-        if (keys.rSkill && p.rSkillLogic) {
-            p.rSkillLogic(p, rooms[roomCode], socket.id);
+        if (keys.rSkill) {
+            if (p.rSkillLogic) {
+                p.rSkillLogic(p, rooms[roomCode], socket.id);
+            }
         } else {
             if (p.rReleaseLogic) {
                 p.rReleaseLogic(p);
@@ -340,21 +342,21 @@ function startGameLoop(roomCode) {
                         }
 
                         const now = Date.now();
-                        const qCooldown = 4000;
-                        const rCooldown = 10000;
+                        const qCooldown = 2000;
+                        const rCooldown = 2000;
                         const skillChance = diff === 'hard' ? 0.04 : 0.015;
                         
                         if (bot.skillLogic && Math.random() < skillChance) {
-                            if (!bot.lastRSkillTime || now - bot.lastRSkillTime >= rCooldown) {
+                            if (!bot.lastQSkillTime || now - bot.lastQSkillTime >= qCooldown) {
                                 bot.skillLogic(bot, room, 'bot');
-                                bot.lastRSkillTime = now;
+                                bot.lastQSkillTime = now;
                             }
                         }
 
                         if (bot.rSkillLogic && Math.random() < (skillChance * 0.7)) {
-                            if (!bot.lastQSkillTime || now - bot.lastQSkillTime >= qCooldown) {
+                            if (!bot.lastRSkillTime || now - bot.lastRSkillTime >= rCooldown) {
                                 bot.rSkillLogic(bot, room, 'bot');
-                                bot.lastQSkillTime = now;
+                                bot.lastRSkillTime = now;
                             }
                         }
                     } else {
@@ -399,6 +401,7 @@ function startGameLoop(roomCode) {
                 if (p.x > 800 - p.width) p.x = 800 - p.width;
             }
 
+            // 게임 오버 체크 및 승자 판정
             for (let id in room.players) {
                 const p = room.players[id];
                 if (!p.isDead && p.hp <= 0) {
@@ -433,6 +436,7 @@ function startGameLoop(roomCode) {
                 }
             }
 
+            // 투사체 및 파티클 이동 처리
             for (let i = room.projectiles.length - 1; i >= 0; i--) {
                 const proj = room.projectiles[i];
                 
