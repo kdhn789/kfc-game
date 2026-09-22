@@ -3,11 +3,11 @@ module.exports = {
     hp: 150,
     speed: 5,
     jumpPower: -12,
-    meleeDamage: 12,
-    image: './images/nohgwanhwi.png', // 캐릭터 이미지가 있다면 경로 설정
+    meleeDamage: 10,
+    image: './images/nohgwanhwi.png',
     scale: 1,
 
-    // Q 스킬: 드럼통 (범위 내 상대방을 파란 트럼통에 가두어 3초간 이동 불가, 쿨타임 3초)
+    // Q 스킬: 드럼통 (노란색 범위 표시 및 파란색 드럼통 사각형으로 상대 속박)
     onQSkill: (p, room, socketId) => {
         const now = Date.now();
         const cooldown = 3000; // 3초 쿨타임
@@ -17,6 +17,10 @@ module.exports = {
 
             p.dialogue = "파란트럼통에 갇혀라!";
             p.dialogueTimer = 40;
+
+            // E스킬(기본 공격 범위)처럼 Q스킬 시전 시 잠시 노란색 범위 이펙트 표시
+            p.isQAttacking = true;
+            setTimeout(() => { p.isQAttacking = false; }, 200);
 
             const attackBox = {
                 x: p.facing === 'right' ? p.x + p.width : p.x - 70,
@@ -35,7 +39,6 @@ module.exports = {
                         attackBox.y < enemy.y + enemy.height &&
                         attackBox.y + enemy.height > enemy.y) {
                         
-                        // 데미지 10 및 파란 트럼통에 갇힘 (3초간 이동 불가 속박)
                         if (!(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
                             enemy.hp -= 10;
                             if (enemy.hp < 0) enemy.hp = 0;
@@ -45,6 +48,7 @@ module.exports = {
                         enemy.speed = 0;
                         enemy.vx = 0;
                         enemy.isTrapped = true;
+                        enemy.isDrumTrapped = true; // 파란색 드럼통 렌더링 플래그
 
                         room.floatingTexts.push({
                             x: enemy.x + enemy.width / 2,
@@ -58,6 +62,7 @@ module.exports = {
                             if (enemy) {
                                 enemy.speed = originalSpeed;
                                 enemy.isTrapped = false;
+                                enemy.isDrumTrapped = false;
                             }
                         }, 3000); // 3초 속박
                     }
@@ -99,7 +104,6 @@ module.exports = {
                             if (enemy.hp < 0) enemy.hp = 0;
                         }
 
-                        // 바라보는 방향에 따라 맵 맨 끝(0 또는 800 - 적 너비)으로 위치 이동
                         if (p.facing === 'right') {
                             enemy.x = 800 - enemy.width;
                         } else {

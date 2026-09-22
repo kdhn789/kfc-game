@@ -793,10 +793,27 @@
                     ctx.lineWidth = 3;
                     ctx.strokeRect(p.x, p.y, p.width, p.height);
 
+                    // E스킬 공격 범위 표시
                     if (p.isAttacking) {
                         ctx.fillStyle = '#ffeb3b';
                         const punchX = p.facing === 'right' ? p.x + p.width : p.x - 30;
                         ctx.fillRect(punchX, p.y + (p.height / 2) - 15, 30, 30);
+                    }
+
+                    // 노관휘 Q스킬(드럼통) 범위 표시 (노란색)
+                    if (p.isQAttacking) {
+                        ctx.fillStyle = 'rgba(255, 235, 59, 0.5)';
+                        const qBoxX = p.facing === 'right' ? p.x + p.width : p.x - 70;
+                        ctx.fillRect(qBoxX, p.y - 10, 70, p.height + 20);
+                    }
+
+                    // 파란색 드럼통에 갇힌 상태 표시
+                    if (p.isDrumTrapped) {
+                        ctx.fillStyle = 'rgba(0, 188, 212, 0.6)';
+                        ctx.fillRect(p.x - 5, p.y - 5, p.width + 10, p.height + 10);
+                        ctx.strokeStyle = '#00bcd4';
+                        ctx.lineWidth = 3;
+                        ctx.strokeRect(p.x - 5, p.y - 5, p.width + 10, p.height + 10);
                     }
 
                     ctx.fillStyle = '#fff';
