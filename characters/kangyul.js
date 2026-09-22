@@ -2,9 +2,9 @@
 module.exports = {
     name: '강율',
     hp: 100,
-    speed: 14,
+    speed: 16,
     jumpPower: -13,
-    meleeDamage: 17,
+    meleeDamage: 14,
     scale: 1.0,
     image: './images/kangyul.png',
 
@@ -26,7 +26,7 @@ module.exports = {
             y: p.y,
             text: `+20`,
             color: '#00d1a7', // 청록색 계열
-            life: 30
+            life: 20
         });
 
         // 머리 위로 청록색 십자가 및 페이드아웃 효과를 위한 파티클/텍스트 오브젝트 생성
@@ -37,7 +37,7 @@ module.exports = {
             vy: -0.5,
             color: '#00d196',
             type: 'particle',
-            life: 40
+            life: 20
         });
     },
 
