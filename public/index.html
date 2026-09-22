@@ -247,6 +247,37 @@
             width: 200px;
         }
         .diff-btn:hover { background: #ff9800; color: black; }
+
+        /* 대기 중인 호실 리스트 스타일 */
+        #roomListContainer {
+            margin-top: 20px;
+            border-top: 1px solid #555;
+            padding-top: 15px;
+            text-align: left;
+            max-width: 350px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .room-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #444;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            border-radius: 5px;
+        }
+        .room-item button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            margin: 0;
+        }
+        .room-item button:hover { background: #45a049; }
     </style>
 </head>
 <body>
@@ -267,6 +298,14 @@
         
         <div style="margin-top: 15px; border-top: 1px solid #555; padding-top: 15px;">
             <button id="jjintaPlayBtn" style="background: #ff9800; color: #000; border: none; border-radius: 5px; padding: 12px 20px; font-size: 16px; font-weight: bold; cursor: pointer;">찐따플레이</button>
+        </div>
+
+        <!-- 대기 중인 방 목록 영역 -->
+        <div id="roomListContainer">
+            <h3 style="margin: 0 0 10px 0; font-size: 15px; color: #ff9800; text-align: center;">대기 중인 호실 목록</h3>
+            <div id="roomList">
+                <p style="text-align: center; color: #888; font-size: 14px; margin: 0;">현재 대기 중인 호실이 없습니다.</p>
+            </div>
         </div>
     </div>
 
@@ -401,6 +440,9 @@
         const waitExitBtn = document.getElementById('waitExitBtn');
         const charExitBtn = document.getElementById('charExitBtn');
         const gameExitBtn = document.getElementById('gameExitBtn');
+
+        // 대기실 목록 엘리먼트 추가
+        const roomListEl = document.getElementById('roomList');
 
         const charImages = {
             '김도현': new Image(),
@@ -599,6 +641,34 @@
         socket.on('update-room', (count) => {
             statusText.innerText = `현재 호실 인원: ${count}명 (상대를 기다리는 중...)`;
         });
+
+        // 대기 중인 방 목록 실시간 수신 및 렌더링
+        socket.on('room-list-update', (waitingRooms) => {
+            roomListEl.innerHTML = '';
+            if (waitingRooms.length === 0) {
+                roomListEl.innerHTML = '<p style="text-align: center; color: #888; font-size: 14px; margin: 0;">현재 대기 중인 호실이 없습니다.</p>';
+                return;
+            }
+
+            waitingRooms.forEach(roomCode => {
+                const div = document.createElement('div');
+                div.className = 'room-item';
+                div.innerHTML = `
+                    <span>호실 ${roomCode} (1명 대기 중)</span>
+                    <button onclick="joinSpecificRoom('${roomCode}')">참가</button>
+                `;
+                roomListEl.appendChild(div);
+            });
+        });
+
+        // 목록에서 참가 버튼 클릭 시 동작
+        window.joinSpecificRoom = function(roomCode) {
+            currentRoom = roomCode;
+            socket.emit('join-room', roomCode);
+            lobby.classList.add('hidden');
+            waitingRoom.classList.remove('hidden');
+            displayRoomCode.innerText = currentRoom;
+        };
 
         socket.on('start-character-select', () => {
             waitingRoom.classList.add('hidden');

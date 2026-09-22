@@ -25,8 +25,33 @@ if (fs.existsSync(charFolderPath)) {
 
 const rooms = {};
 
+// 대기 중인 방 목록을 모든 클라이언트에게 브로드캐스트하는 헬퍼 함수
+function broadcastRoomList() {
+    const waitingRooms = [];
+    for (const rCode in rooms) {
+        if (!rooms[rCode].isSingle && rooms[rCode].status === 'waiting') {
+            const playerCount = Object.keys(rooms[rCode].players).length;
+            if (playerCount === 1) {
+                waitingRooms.push(rCode);
+            }
+        }
+    }
+    io.emit('room-list-update', waitingRooms);
+}
+
 io.on('connection', (socket) => {
     console.log(`사용자 접속: ${socket.id}`);
+
+    // 접속 시 현재 대기 중인 방 목록 즉시 전달
+    const waitingRooms = [];
+    for (const rCode in rooms) {
+        if (!rooms[rCode].isSingle && rooms[rCode].status === 'waiting') {
+            if (Object.keys(rooms[rCode].players).length === 1) {
+                waitingRooms.push(rCode);
+            }
+        }
+    }
+    socket.emit('room-list-update', waitingRooms);
 
     socket.on('start-single-play', (difficulty) => {
         const roomCode = 'single_' + socket.id;
@@ -87,6 +112,7 @@ io.on('connection', (socket) => {
             botTimer: 0
         };
 
+        broadcastRoomList();
         socket.emit('start-character-select');
     });
 
@@ -134,8 +160,11 @@ io.on('connection', (socket) => {
         };
 
         io.to(roomCode).emit('update-room', Object.keys(room.players).length);
+        broadcastRoomList(); // 방 인원이 채워지거나 생성되면 목록 갱신
         
         if (Object.keys(room.players).length === 2) {
+            room.status = 'playing_prep'; // 매칭 완료 상태로 변경하여 목록에서 제외
+            broadcastRoomList();
             io.to(roomCode).emit('start-ready-phase');
             io.to(roomCode).emit('start-character-select');
         }
@@ -288,6 +317,7 @@ io.on('connection', (socket) => {
             const room = rooms[roomCode];
             if (room.gameInterval) clearInterval(room.gameInterval);
             delete rooms[roomCode];
+            broadcastRoomList();
             io.to(roomCode).emit('game-over', { winner: null });
         }
     });
