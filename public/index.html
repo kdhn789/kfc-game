@@ -670,10 +670,15 @@
             ctx.lineTo(800, 340);
             ctx.stroke();
 
+            // 투사체 및 파티클 렌더링
             if (state.projectiles) {
                 state.projectiles.forEach(proj => {
                     ctx.beginPath();
-                    if (proj.char === '박준모' || proj.type === 'donut') {
+                    if (proj.type === 'particle') {
+                        ctx.fillStyle = proj.color || '#fff';
+                        ctx.arc(proj.x, proj.y, 4, 0, Math.PI * 2);
+                        ctx.fill();
+                    } else if (proj.char === '박준모' || proj.type === 'donut') {
                         ctx.strokeStyle = proj.color || '#ff9800';
                         ctx.lineWidth = 3;
                         ctx.arc(proj.x, proj.y, 9, 0, Math.PI * 2);
@@ -736,7 +741,6 @@
                 }
             }
 
-            // 서버에서 내려온 플로팅 텍스트를 중복 증식 없이 정확히 1회만 깔끔하게 렌더링
             if (state.floatingTexts) {
                 state.floatingTexts.forEach(ft => {
                     ctx.save();

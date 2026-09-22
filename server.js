@@ -1,4 +1,4 @@
-// server_6.js 기반 수정
+// server_3.js 기반 수정
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -251,6 +251,7 @@ io.on('connection', (socket) => {
                                     x: enemy.x + enemy.width / 2,
                                     y: enemy.y,
                                     text: `-${p.meleeDamage}`,
+                                    color: '#ff4757',
                                     life: 30
                                 });
                             }
@@ -364,21 +365,9 @@ function startGameLoop(roomCode) {
                 }
             }
 
-            const playerIds = Object.keys(room.players);
-
             for (let id in room.players) {
                 const p = room.players[id];
                 if (p.isDead) continue;
-
-                if (p.isContemplating) {
-                    p.contemplateTimer = (p.contemplateTimer || 0) + 1;
-                    if (p.contemplateTimer >= 30) {
-                        p.contemplateTimer = 0;
-                        if (p.hp < p.maxHp) {
-                            p.hp = Math.min(p.maxHp, p.hp + 3);
-                        }
-                    }
-                }
 
                 if (p.dialogueTimer > 0) {
                     p.dialogueTimer--;
@@ -395,6 +384,7 @@ function startGameLoop(roomCode) {
                             x: p.x + p.width / 2,
                             y: p.y,
                             text: `-2`,
+                            color: '#ff4757',
                             life: 30
                         });
                     }
@@ -411,7 +401,7 @@ function startGameLoop(roomCode) {
                 if (p.x > 800 - p.width) p.x = 800 - p.width;
             }
 
-            // 게임 오버 체크 및 승자 판정
+            // 게임 오버 체크 및 승자 판정 (안전하게 생존한 대상을 승자로 판정)
             for (let id in room.players) {
                 const p = room.players[id];
                 if (!p.isDead && p.hp <= 0) {
@@ -425,6 +415,7 @@ function startGameLoop(roomCode) {
                 }
             }
 
+            const playerIds = Object.keys(room.players);
             if (playerIds.length === 2) {
                 const p1 = room.players[playerIds[0]];
                 const p2 = room.players[playerIds[1]];
@@ -445,7 +436,7 @@ function startGameLoop(roomCode) {
                 }
             }
 
-            // 투사체 이동 및 피격 판정
+            // 투사체 및 파티클 이동 처리
             for (let i = room.projectiles.length - 1; i >= 0; i--) {
                 const proj = room.projectiles[i];
                 
@@ -468,6 +459,9 @@ function startGameLoop(roomCode) {
                     continue;
                 }
 
+                // 일반 투사체인 경우에만 피격 판정 수행 (파티클은 통과)
+                if (proj.type === 'particle') continue;
+
                 const pWidth = proj.width || 15;
                 const pHeight = proj.height || 15;
 
@@ -481,24 +475,18 @@ function startGameLoop(roomCode) {
                             proj.y < enemy.y + enemy.height &&
                             proj.y + pHeight > enemy.y) {
                             
-                            const dmg = proj.damage || (proj.isSpear ? 30 : 6);
+                            const dmg = proj.damage || 6;
                             if (!(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
                                 enemy.hp -= dmg;
                                 room.floatingTexts.push({
                                     x: enemy.x + enemy.width / 2,
                                     y: enemy.y,
                                     text: `-${dmg}`,
+                                    color: '#ff4757',
                                     life: 30
                                 });
                             }
                             
-                            if (proj.knockback) {
-                                const knockDir = proj.vx > 0 ? 1 : -1;
-                                enemy.x += knockDir * proj.knockback;
-                                if (enemy.x < 0) enemy.x = 0;
-                                if (enemy.x > 800 - enemy.width) enemy.x = 800 - enemy.width;
-                            }
-
                             room.screenShake = 6; 
                             room.projectiles.splice(i, 1);
                             break;

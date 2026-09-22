@@ -8,7 +8,7 @@ module.exports = {
     scale: 1.0,
     image: './images/kangyul.png',
 
-    // Q 스킬: 율스트라이크 (쿨타임 4초 및 대사 추가)
+    // Q 스킬: 폐 터뜨리기 (폐공격)
     onQSkill: (p, room, socketId) => {
         if (room.status !== 'playing') return;
 
@@ -16,12 +16,24 @@ module.exports = {
         if (p.lastQSkillTime && now - p.lastQSkillTime < 4000) return;
         p.lastQSkillTime = now;
 
-        // 대사 설정
         p.dialogue = "내 폐!";
-        p.dialogueTimer = 90; // 대사 유지 시간
+        p.dialogueTimer = 90;
 
         p.isAttacking = true;
         setTimeout(() => { p.isAttacking = false; }, 200);
+
+        // 폐공격 파티클(이펙트) 생성 추가 (푸른 계열의 파동)
+        for (let i = 0; i < 6; i++) {
+            room.projectiles.push({
+                x: p.x + p.width / 2,
+                y: p.y + p.height / 2,
+                vx: (Math.random() - 0.5) * 8,
+                vy: (Math.random() - 0.5) * 8,
+                color: '#00cec9',
+                type: 'particle',
+                life: 20
+            });
+        }
 
         for (let id in room.players) {
             if (id !== socketId) {
@@ -35,6 +47,13 @@ module.exports = {
 
                 if (!(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
                     enemy.hp -= 20;
+                    room.floatingTexts.push({
+                        x: enemy.x + enemy.width / 2,
+                        y: enemy.y,
+                        text: `-20`,
+                        color: '#00cec9',
+                        life: 30
+                    });
                 }
                 enemy.x += dashDir * 40;
                 room.screenShake = 8;
@@ -43,12 +62,13 @@ module.exports = {
                     enemy.hp = 0;
                     enemy.isDead = true;
                     room.status = 'ended';
+                    io?.to(roomCode)?.emit('game-over', { winner: socketId });
                 }
             }
         }
     },
 
-    // SHIFT(R) 스킬: 무빙포즈 (쿨타임 4초 및 대사 추가)
+    // SHIFT(R) 스킬: 심장 터뜨리기
     onRSkill: (p, room, socketId) => {
         if (room.status !== 'playing') return;
 
@@ -56,9 +76,21 @@ module.exports = {
         if (p.lastRSkillTime && now - p.lastRSkillTime < 4000) return;
         p.lastRSkillTime = now;
 
-        // 대사 설정
         p.dialogue = "내 심장!";
         p.dialogueTimer = 90;
+
+        // 심장공격 파티클(이펙트) 생성 추가 (붉은 계열의 파동)
+        for (let i = 0; i < 8; i++) {
+            room.projectiles.push({
+                x: p.x + p.width / 2,
+                y: p.y + p.height / 2,
+                vx: (Math.random() - 0.5) * 10,
+                vy: (Math.random() - 0.5) * 10,
+                color: '#db3131c8',
+                type: 'particle',
+                life: 25
+            });
+        }
 
         for (let id in room.players) {
             if (id !== socketId) {
@@ -67,19 +99,35 @@ module.exports = {
 
                 p.hp -= 30;
                 if (p.hp < 0) p.hp = 0;
+                room.floatingTexts.push({
+                    x: p.x + p.width / 2,
+                    y: p.y,
+                    text: `-30`,
+                    color: '#a14141cb',
+                    life: 30
+                });
 
                 room.screenShake = 15;
 
+                // 자기 자신이 심장 터뜨리기로 사망했을 때 게임 멈춤 방지 및 처리
                 if (p.hp <= 0) {
                     p.isDead = true;
                     room.status = 'ended';
-                    break; 
+                    return; 
                 }
 
                 if (!(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
                     enemy.hp -= 30;
+                    room.floatingTexts.push({
+                        x: enemy.x + enemy.width / 2,
+                        y: enemy.y,
+                        text: `-30`,
+                        color: '#ff7675',
+                        life: 30
+                    });
                 }
 
+                // 상대방이 심장 터뜨리기에 맞아 사망했을 때 게임 멈춤 방지 및 처리
                 if (enemy.hp <= 0 && !(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
                     enemy.hp = 0;
                     enemy.isDead = true;
@@ -89,7 +137,6 @@ module.exports = {
         }
     },
 
-    // 기본 공격(E)
     onMeleeSkill: (p, room, socketId) => {
         if (room.status !== 'playing') return;
 
@@ -123,6 +170,13 @@ module.exports = {
                     
                     if (!(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
                         enemy.hp -= p.meleeDamage;
+                        room.floatingTexts.push({
+                            x: enemy.x + enemy.width / 2,
+                            y: enemy.y,
+                            text: `-${p.meleeDamage}`,
+                            color: '#ff4757',
+                            life: 30
+                        });
                     }
                     
                     const knockDir = p.facing === 'right' ? 1 : -1;
