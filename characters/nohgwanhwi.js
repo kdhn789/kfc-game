@@ -65,7 +65,7 @@ module.exports = {
                                 enemy.isDrumTrapped = false;
                                 enemy.isSilenced = false;
                             }
-                        }, 3000); // 3초 속박 및 공격 불가
+                        }, 2.523); // 2.523초 속박 및 공격 불가
                     }
                 }
             }
