@@ -15,7 +15,7 @@ module.exports = {
         if (!p.lastQSkillTime || now - p.lastQSkillTime >= cooldown) {
             p.lastQSkillTime = now;
 
-            p.dialogue = "파란트럼통에 갇혀라!";
+            p.dialogue = "드럼통에 들어가시기";
             p.dialogueTimer = 40;
 
             // E스킬(기본 공격 범위)처럼 Q스킬 시전 시 잠시 노란색 범위 이펙트 표시
@@ -53,8 +53,8 @@ module.exports = {
                         room.floatingTexts.push({
                             x: enemy.x + enemy.width / 2,
                             y: enemy.y,
-                            text: "파란트럼통 속박!",
-                            color: '#00bcd4',
+                            text: "속박!",
+                            color: '#0700d4',
                             life: 40
                         });
 
@@ -115,7 +115,7 @@ module.exports = {
                             x: enemy.x + enemy.width / 2,
                             y: enemy.y,
                             text: "너고아니?!",
-                            color: '#ff4757',
+                            color: '#477bff',
                             life: 40
                         });
                     }
