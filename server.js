@@ -247,7 +247,6 @@ io.on('connection', (socket) => {
                             
                             if (!(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
                                 enemy.hp -= p.meleeDamage;
-                                // [문제 2 수정] 실제 데미지가 깎이는 순간에만 텍스트 생성 (중복 방지용 클라이언트측 중복 생성 제거 및 서버 통합)
                                 room.floatingTexts.push({
                                     x: enemy.x + enemy.width / 2,
                                     y: enemy.y,
@@ -412,7 +411,7 @@ function startGameLoop(roomCode) {
                 if (p.x > 800 - p.width) p.x = 800 - p.width;
             }
 
-            // [문제 1 수정] 체력 검사 및 게임오버 처리 (체력이 0 이하가 되면 즉시 게임 상태를 'ended'로 전환하고 확실하게 승자 판정 전송)
+            // 게임 오버 체크 및 승자 판정
             for (let id in room.players) {
                 const p = room.players[id];
                 if (!p.isDead && p.hp <= 0) {
@@ -485,7 +484,6 @@ function startGameLoop(roomCode) {
                             const dmg = proj.damage || (proj.isSpear ? 30 : 6);
                             if (!(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
                                 enemy.hp -= dmg;
-                                // [문제 2 수정] 투사체 피격 시 실제 체력이 깎일 때만 텍스트 추가 (클라이언트 측 중복 생성 코드는 제거됨)
                                 room.floatingTexts.push({
                                     x: enemy.x + enemy.width / 2,
                                     y: enemy.y,
