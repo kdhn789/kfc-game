@@ -2,7 +2,7 @@
 module.exports = {
     name: '강율',
     hp: 100,
-    speed: 16,
+    speed: 14,
     jumpPower: -13,
     meleeDamage: 14,
     scale: 1.0,
@@ -70,17 +70,12 @@ module.exports = {
         }
     },
 
-    // 공격하면 자기 피 1 닳는 기능 유지
+    // 공격하면 자기 피 1 닳는 기능 유지 (직접 room.status를 건드리지 않고 hp만 깎아서 서버 루프가 안전하게 감지하도록 수정)
     onMeleeSkill: (p, room, socketId) => {
         if (room.status !== 'playing') return;
 
         p.hp -= 1;
-        if (p.hp <= 0) {
-            p.hp = 0;
-            p.isDead = true;
-            room.status = 'ended';
-            return;
-        }
+        if (p.hp < 0) p.hp = 0;
 
         p.isAttacking = true;
         setTimeout(() => { p.isAttacking = false; }, 200);
@@ -104,6 +99,7 @@ module.exports = {
                     
                     if (!(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
                         enemy.hp -= p.meleeDamage;
+                        if (enemy.hp < 0) enemy.hp = 0;
                         room.floatingTexts.push({
                             x: enemy.x + enemy.width / 2,
                             y: enemy.y,
@@ -115,12 +111,6 @@ module.exports = {
                     const knockDir = p.facing === 'right' ? 1 : -1;
                     enemy.x += knockDir * 40; 
                     room.screenShake = 10; 
-
-                    if (enemy.hp <= 0 && !(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
-                        enemy.hp = 0;
-                        enemy.isDead = true;
-                        room.status = 'ended';
-                    }
                 }
             }
         }

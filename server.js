@@ -247,6 +247,7 @@ io.on('connection', (socket) => {
                             
                             if (!(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
                                 enemy.hp -= p.meleeDamage;
+                                if (enemy.hp < 0) enemy.hp = 0;
                                 room.floatingTexts.push({
                                     x: enemy.x + enemy.width / 2,
                                     y: enemy.y,
@@ -379,6 +380,7 @@ function startGameLoop(roomCode) {
                     if (p.burnTimer >= 30) { 
                         p.burnTimer = 0;
                         p.hp -= 2; 
+                        if (p.hp < 0) p.hp = 0;
                         p.burnTicks--;
                         room.floatingTexts.push({
                             x: p.x + p.width / 2,
@@ -401,7 +403,7 @@ function startGameLoop(roomCode) {
                 if (p.x > 800 - p.width) p.x = 800 - p.width;
             }
 
-            // 게임 오버 체크 및 승자 판정
+            // 게임 오버 체크 및 승자 판정 (체력 0 이하 감지 시 정상적으로 이벤트 전송 및 종료)
             for (let id in room.players) {
                 const p = room.players[id];
                 if (!p.isDead && p.hp <= 0) {
@@ -477,6 +479,7 @@ function startGameLoop(roomCode) {
                             const dmg = proj.damage || 6;
                             if (!(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
                                 enemy.hp -= dmg;
+                                if (enemy.hp < 0) enemy.hp = 0;
                                 room.floatingTexts.push({
                                     x: enemy.x + enemy.width / 2,
                                     y: enemy.y,
