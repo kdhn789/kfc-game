@@ -41,7 +41,7 @@ module.exports = {
         if (room.status !== 'playing') return;
 
         const now = Date.now();
-        if (p.lastRSkillTime && now - p.lastRSkillTime < 2000) return;
+        if (p.lastRSkillTime && now - p.lastRSkillTime < 1200) return;
         p.lastRSkillTime = now;
 
         p.dialogue = "내 폐!";
