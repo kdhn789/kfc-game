@@ -2,7 +2,7 @@
 module.exports = {
     name: '강율',
     hp: 100,
-    speed: 8,
+    speed: 14,
     jumpPower: -13,
     meleeDamage: 17,
     scale: 1.0,
