@@ -3,7 +3,7 @@ module.exports = {
     hp: 152.3,
     speed: 10,
     jumpPower: -11,
-    meleeDamage: 10,
+    meleeDamage: 9.523,
     image: './images/seongyeoljin.png',
     // Q 스킬: 우유 탄막 8방향 발사
     onQSkill: (p, room, socketId) => {

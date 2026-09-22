@@ -3,7 +3,7 @@ module.exports = {
     hp: 170,          // 묵직한 체력
     speed: 4.5,
     jumpPower: -11,
-    meleeDamage: 13,
+    meleeDamage: 12,
     image: './images/kangjaeseung.png', // 캐릭터 이미지 파일 경로
 
     // Q 스킬: 밀치기 (데미지 10, 멀리 넉백, 쿨타임 2초)

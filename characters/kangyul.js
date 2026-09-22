@@ -4,7 +4,7 @@ module.exports = {
     hp: 100,
     speed: 8,
     jumpPower: -15,
-    meleeDamage: 17,
+    meleeDamage: 15,
     scale: 1.0,
     image: './images/kangyul.png',
 
@@ -29,7 +29,7 @@ module.exports = {
                 y: p.y + p.height / 2,
                 vx: (Math.random() - 0.5) * 8,
                 vy: (Math.random() - 0.5) * 8,
-                color: '#00cec9',
+                color: '#e20d0da7',
                 type: 'particle',
                 life: 20
             });
