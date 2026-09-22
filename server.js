@@ -1,4 +1,4 @@
-// server_5.js
+// server_11.js
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -147,6 +147,7 @@ io.on('connection', (socket) => {
         const room = rooms[roomCode];
         const playerKeys = Object.keys(room.players);
 
+        // 플레이어 정원이 찼거나 이미 게임 중인 경우 완벽하게 방관자로 처리
         if (playerKeys.length >= 2 || room.status === 'playing' || room.status === 'waiting_countdown' || room.status === 'playing_prep') {
             if (!room.spectators) room.spectators = new Set();
             room.spectators.add(socket.id);
@@ -220,13 +221,15 @@ io.on('connection', (socket) => {
 
     socket.on('select-character', (charName) => {
         const roomCode = socket.roomCode;
-        if (!rooms[roomCode]) return;
+        if (!rooms[roomCode] || socket.isSpectator) return; // 방관자 선택 원천 차단
 
         const room = rooms[roomCode];
         const p = room.players[socket.id];
+        if (!p) return;
+        
         const stat = CHARACTER_STATS[charName];
 
-        if (p && stat) {
+        if (stat) {
             p.char = charName;
             p.hp = stat.hp;
             p.maxHp = stat.hp;
@@ -270,7 +273,7 @@ io.on('connection', (socket) => {
     socket.on('player-input', (keys) => {
         const roomCode = socket.roomCode;
         if (!rooms[roomCode] || rooms[roomCode].status !== 'playing') return;
-        if (socket.isSpectator) return;
+        if (socket.isSpectator) return; // 방관자 입력 무시
         const p = rooms[roomCode].players[socket.id];
         if (!p || p.isDead) return;
 
@@ -341,13 +344,14 @@ io.on('connection', (socket) => {
         }
     });
 
-    // [수정] 게임방을 명시적으로 나갈 때 처리하는 이벤트 추가
     socket.on('leave-room', () => {
         const roomCode = socket.roomCode;
         if (roomCode && rooms[roomCode]) {
             const room = rooms[roomCode];
             if (room.spectators && room.spectators.has(socket.id)) {
                 room.spectators.delete(socket.id);
+                socket.leave(roomCode);
+                socket.isSpectator = false;
                 broadcastRoomList();
                 return;
             }
@@ -367,7 +371,10 @@ io.on('connection', (socket) => {
                 broadcastRoomList();
                 return;
             }
-            if (room.gameInterval) clearInterval(room.gameInterval);
+            if (room.gameInterval) {
+                clearInterval(room.gameInterval);
+                room.gameInterval = null;
+            }
             delete rooms[roomCode];
             broadcastRoomList();
             io.to(roomCode).emit('game-over', { winner: null });
@@ -383,7 +390,10 @@ function startGameLoop(roomCode) {
 
     room.gameInterval = setInterval(() => {
         if (!rooms[roomCode] || rooms[roomCode].status === 'ended') {
-            clearInterval(room.gameInterval);
+            if (room.gameInterval) {
+                clearInterval(room.gameInterval);
+                room.gameInterval = null;
+            }
             return;
         }
 
@@ -506,7 +516,6 @@ function startGameLoop(roomCode) {
                     const killerId = Object.keys(room.players).find(k => k !== id);
                     io.to(roomCode).emit('game-over', { winner: killerId });
                     
-                    // [수정] 게임 종료 시 루프 인터벌 즉시 정리 및 방 정보 정리
                     if (room.gameInterval) {
                         clearInterval(room.gameInterval);
                         room.gameInterval = null;
