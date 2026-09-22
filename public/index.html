@@ -257,7 +257,7 @@
             border-top: 1px solid #555;
             padding-top: 15px;
             text-align: left;
-            max-width: 350px;
+            max-width: 400px;
             margin-left: auto;
             margin-right: auto;
         }
@@ -280,7 +280,10 @@
             cursor: pointer;
             margin: 0;
         }
-        .room-item button:hover { background: #45a049; }
+        .room-item button.spectate-btn {
+            background: #2196F3;
+        }
+        .room-item button:hover { opacity: 0.9; }
     </style>
 </head>
 <body>
@@ -304,9 +307,9 @@
         </div>
 
         <div id="roomListContainer">
-            <h3 style="margin: 0 0 10px 0; font-size: 15px; color: #ff9800; text-align: center;">대기 중인 호실 목록</h3>
+            <h3 style="margin: 0 0 10px 0; font-size: 15px; color: #ff9800; text-align: center;">호실 목록</h3>
             <div id="roomList">
-                <p style="text-align: center; color: #888; font-size: 14px; margin: 0;">현재 대기 중인 호실이 없습니다.</p>
+                <p style="text-align: center; color: #888; font-size: 14px; margin: 0;">현재 개설된 호실이 없습니다.</p>
             </div>
         </div>
     </div>
@@ -383,7 +386,7 @@
 
     <div id="gameRoom" class="hidden">
         <div style="display: flex; justify-content: space-between; width: 800px; align-items: center; margin-bottom: 5px;">
-            <h2 style="margin: 0;">조작키로 대결하세요!</h2>
+            <h2 id="gameHeaderTitle" style="margin: 0;">조작키로 대결하세요!</h2>
             <button id="gameExitBtn" style="background: #f44336; color: white; border: none; border-radius: 5px; padding: 6px 12px; font-weight: bold; cursor: pointer;">나가기</button>
         </div>
         <canvas id="gameCanvas" width="800" height="400"></canvas>
@@ -454,6 +457,7 @@
         const waitExitBtn = document.getElementById('waitExitBtn');
         const charExitBtn = document.getElementById('charExitBtn');
         const gameExitBtn = document.getElementById('gameExitBtn');
+        const gameHeaderTitle = document.getElementById('gameHeaderTitle');
 
         const roomListEl = document.getElementById('roomList');
 
@@ -480,6 +484,7 @@
         let selectedCharacter = null;
         let keys = { left: false, right: false, jump: false, skill: false, qSkill: false, rSkill: false };
         let gameInterval = null;
+        let isSpectating = false;
 
         const mobileControls = document.getElementById('mobileControls');
         const touchSettingsBtn = document.getElementById('touchSettingsBtn');
@@ -558,7 +563,7 @@
         window.addEventListener('touchend', () => { isDragging = false; });
 
         window.addEventListener('keydown', (e) => {
-            if (gameRoom.classList.contains('hidden')) return;
+            if (gameRoom.classList.contains('hidden') || isSpectating) return;
             if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
             if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
             if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') keys.jump = true;
@@ -571,7 +576,7 @@
         });
 
         window.addEventListener('keyup', (e) => {
-            if (gameRoom.classList.contains('hidden')) return;
+            if (gameRoom.classList.contains('hidden') || isSpectating) return;
             if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
             if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
             if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') keys.jump = false;
@@ -585,21 +590,21 @@
             if (!btn) return;
 
             btn.addEventListener('touchstart', (e) => {
-                if (isCustomizing) return;
+                if (isCustomizing || isSpectating) return;
                 e.preventDefault();
                 keys[keyName] = true;
             });
             btn.addEventListener('touchend', (e) => {
-                if (isCustomizing) return;
+                if (isCustomizing || isSpectating) return;
                 e.preventDefault();
                 if (isHold) keys[keyName] = false;
             });
             btn.addEventListener('mousedown', (e) => {
-                if (isCustomizing) return;
+                if (isCustomizing || isSpectating) return;
                 keys[keyName] = true;
             });
             btn.addEventListener('mouseup', (e) => {
-                if (isCustomizing) return;
+                if (isCustomizing || isSpectating) return;
                 if (isHold) keys[keyName] = false;
             });
         }
@@ -618,6 +623,7 @@
                 return;
             }
             currentRoom = roomCode;
+            isSpectating = false;
             socket.emit('join-room', roomCode);
             lobby.classList.add('hidden');
             waitingRoom.classList.remove('hidden');
@@ -657,33 +663,53 @@
             statusText.innerText = `현재 호실 인원: ${count}명 (상대를 기다리는 중...)`;
         });
 
-        socket.on('room-list-update', (waitingRooms) => {
+        socket.on('room-list-update', (roomListInfo) => {
             roomListEl.innerHTML = '';
-            if (waitingRooms.length === 0) {
-                roomListEl.innerHTML = '<p style="text-align: center; color: #888; font-size: 14px; margin: 0;">현재 대기 중인 호실이 없습니다.</p>';
+            if (roomListInfo.length === 0) {
+                roomListEl.innerHTML = '<p style="text-align: center; color: #888; font-size: 14px; margin: 0;">현재 개설된 호실이 없습니다.</p>';
                 return;
             }
 
-            waitingRooms.forEach(roomCode => {
+            roomListInfo.forEach(room => {
                 const div = document.createElement('div');
                 div.className = 'room-item';
-                div.innerHTML = `
-                    <span>호실 ${roomCode} (1명 대기 중)</span>
-                    <button onclick="joinSpecificRoom('${roomCode}')">참가</button>
-                `;
+                
+                if (room.playerCount < 2 && room.status === 'waiting') {
+                    div.innerHTML = `
+                        <span>호실 ${room.roomCode} (${room.playerCount}/2명 대기)</span>
+                        <button onclick="joinSpecificRoom('${room.roomCode}')">참가</button>
+                    `;
+                } else {
+                    div.innerHTML = `
+                        <span>호실 ${room.roomCode} (게임 중 | 관전: ${room.spectatorCount})</span>
+                        <button class="spectate-btn" onclick="joinSpecificRoom('${room.roomCode}')">관전</button>
+                    `;
+                }
                 roomListEl.appendChild(div);
             });
         });
 
         window.joinSpecificRoom = function(roomCode) {
             currentRoom = roomCode;
+            isSpectating = false;
             socket.emit('join-room', roomCode);
             lobby.classList.add('hidden');
             waitingRoom.classList.remove('hidden');
             displayRoomCode.innerText = currentRoom;
         };
 
+        // 관전 모드로 바로 진입할 때 처리
+        socket.on('start-spectating', (data) => {
+            isSpectating = true;
+            waitingRoom.classList.add('hidden');
+            charSelectRoom.classList.add('hidden');
+            gameRoom.classList.remove('hidden');
+            gameHeaderTitle.innerText = `호실 ${currentRoom} 관전 중`;
+            if (mobileControls) mobileControls.style.display = 'none'; // 관전자는 조작 패널 숨김
+        });
+
         socket.on('start-character-select', () => {
+            if (isSpectating) return;
             waitingRoom.classList.add('hidden');
             charSelectRoom.classList.remove('hidden');
         });
@@ -715,6 +741,7 @@
         });
 
         socket.on('start-countdown', () => {
+            if (isSpectating) return;
             charSelectRoom.classList.add('hidden');
             countdownRoom.classList.remove('hidden');
             matchInfo.innerText = `대전이 시작됩니다!`;
@@ -736,6 +763,7 @@
         });
 
         function initGameLoop() {
+            if (isSpectating) return;
             gameInterval = setInterval(() => {
                 socket.emit('player-input', keys);
                 if (keys.skill) keys.skill = false;
@@ -745,6 +773,15 @@
         }
 
         socket.on('game-update', (state) => {
+            // 관전 중인데 게임방 화면이 아니라면 화면 전환
+            if (isSpectating && gameRoom.classList.contains('hidden')) {
+                waitingRoom.classList.add('hidden');
+                charSelectRoom.classList.add('hidden');
+                gameRoom.classList.remove('hidden');
+                gameHeaderTitle.innerText = `호실 ${currentRoom} 관전 중`;
+                if (mobileControls) mobileControls.style.display = 'none';
+            }
+
             ctx.save();
             
             if (state.screenShake > 0) {
@@ -761,6 +798,15 @@
             ctx.moveTo(0, 340);
             ctx.lineTo(800, 340);
             ctx.stroke();
+
+            // 관전자 수 표출 (우측 상단 텍스트)
+            if (state.spectatorCount !== undefined) {
+                ctx.fillStyle = '#ff9800';
+                ctx.font = 'bold 16px Arial';
+                ctx.textAlign = 'right';
+                ctx.fillText(`👀 관전 중: ${state.spectatorCount}명`, canvas.width - 20, 30);
+                ctx.textAlign = 'left'; // 원복
+            }
 
             if (state.projectiles) {
                 state.projectiles.forEach(proj => {
@@ -805,7 +851,7 @@
                         ctx.fillRect(p.x, p.y, p.width, p.height);
                     }
 
-                    if (id === socket.id) {
+                    if (id === socket.id && !isSpectating) {
                         ctx.strokeStyle = '#2ecc71';
                     } else {
                         ctx.strokeStyle = '#e74c3c';
@@ -865,9 +911,15 @@
         });
 
         socket.on('game-over', (data) => {
-            clearInterval(gameInterval);
+            if (gameInterval) clearInterval(gameInterval);
             gameRoom.classList.add('hidden');
             resultScreen.classList.remove('hidden');
+
+            if (isSpectating) {
+                resultTitle.innerText = '게임 종료';
+                resultTitle.className = '';
+                return;
+            }
 
             if (data.winner === socket.id) {
                 resultTitle.innerText = 'WIN';
@@ -883,6 +935,8 @@
             lobby.classList.remove('hidden');
             roomInput.value = '';
             selectedCharacter = null;
+            isSpectating = false;
+            if (mobileControls) mobileControls.style.display = 'flex';
             
             confirmCharBtn.disabled = true;
             charCards.forEach(c => {

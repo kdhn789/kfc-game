@@ -3,7 +3,7 @@ module.exports = {
     hp: 152.3,
     speed: 6,
     jumpPower: -9,
-    meleeDamage: 7,
+    meleeDamage: 6,
     image: './images/nohgwanhwi.png',
     scale: 1.0,
 

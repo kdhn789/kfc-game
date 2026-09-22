@@ -26,36 +26,49 @@ if (fs.existsSync(charFolderPath)) {
 const rooms = {};
 
 function broadcastRoomList() {
-    const waitingRooms = [];
+    const roomListInfo = [];
     for (const rCode in rooms) {
-        if (!rooms[rCode].isSingle && rooms[rCode].status === 'waiting') {
+        if (!rooms[rCode].isSingle) {
             const playerCount = Object.keys(rooms[rCode].players).length;
-            if (playerCount === 1) {
-                waitingRooms.push(rCode);
-            }
+            const spectatorCount = rooms[rCode].spectators ? rooms[rCode].spectators.size : 0;
+            
+            // 대기 중이거나 진행 중인 방 모두 목록에 표시 (관전 가능하도록)
+            roomListInfo.push({
+                roomCode: rCode,
+                playerCount: playerCount,
+                status: rooms[rCode].status,
+                spectatorCount: spectatorCount
+            });
         }
     }
-    io.emit('room-list-update', waitingRooms);
+    io.emit('room-list-update', roomListInfo);
 }
 
 io.on('connection', (socket) => {
     console.log(`사용자 접속: ${socket.id}`);
 
-    const waitingRooms = [];
+    // 접속 시 현재 방 목록 전송
+    const roomListInfo = [];
     for (const rCode in rooms) {
-        if (!rooms[rCode].isSingle && rooms[rCode].status === 'waiting') {
-            if (Object.keys(rooms[rCode].players).length === 1) {
-                waitingRooms.push(rCode);
-            }
+        if (!rooms[rCode].isSingle) {
+            const playerCount = Object.keys(rooms[rCode].players).length;
+            const spectatorCount = rooms[rCode].spectators ? rooms[rCode].spectators.size : 0;
+            roomListInfo.push({
+                roomCode: rCode,
+                playerCount: playerCount,
+                status: rooms[rCode].status,
+                spectatorCount: spectatorCount
+            });
         }
     }
-    socket.emit('room-list-update', waitingRooms);
+    socket.emit('room-list-update', roomListInfo);
 
     socket.on('start-single-play', (difficulty) => {
         const roomCode = 'single_' + socket.id;
         
         rooms[roomCode] = { 
             players: {}, 
+            spectators: new Set(),
             projectiles: [], 
             particles: [],
             floatingTexts: [], 
@@ -123,6 +136,7 @@ io.on('connection', (socket) => {
         if (!rooms[roomCode] || rooms[roomCode].status === 'ended') {
             rooms[roomCode] = { 
                 players: {}, 
+                spectators: new Set(),
                 projectiles: [], 
                 particles: [],
                 floatingTexts: [], 
@@ -135,14 +149,27 @@ io.on('connection', (socket) => {
         const room = rooms[roomCode];
         const playerKeys = Object.keys(room.players);
 
-        if (playerKeys.length >= 2) {
-            socket.emit('room-full');
+        // 방이 꽉 찼거나 이미 게임/진행 중인 경우 관전으로 처리
+        if (playerKeys.length >= 2 || room.status === 'playing' || room.status === 'waiting_countdown' || room.status === 'playing_prep') {
+            if (!room.spectators) room.spectators = new Set();
+            room.spectators.add(socket.id);
+
+            socket.join(roomCode);
+            socket.roomCode = roomCode;
+            socket.isSpectator = true;
+
+            broadcastRoomList();
+            socket.emit('start-spectating', {
+                players: room.players,
+                status: room.status
+            });
             return;
         }
 
         socket.join(roomCode);
         socket.roomCode = roomCode;
         socket.isReady = false;
+        socket.isSpectator = false;
 
         const spawnX = playerKeys.length === 0 ? 100 : 660;
 
@@ -246,6 +273,7 @@ io.on('connection', (socket) => {
     socket.on('player-input', (keys) => {
         const roomCode = socket.roomCode;
         if (!rooms[roomCode] || rooms[roomCode].status !== 'playing') return;
+        if (socket.isSpectator) return; // 관전자는 입력 불가
         const p = rooms[roomCode].players[socket.id];
         if (!p || p.isDead) return;
 
@@ -321,6 +349,11 @@ io.on('connection', (socket) => {
         const roomCode = socket.roomCode;
         if (roomCode && rooms[roomCode]) {
             const room = rooms[roomCode];
+            if (room.spectators && room.spectators.has(socket.id)) {
+                room.spectators.delete(socket.id);
+                broadcastRoomList();
+                return;
+            }
             if (room.gameInterval) clearInterval(room.gameInterval);
             delete rooms[roomCode];
             broadcastRoomList();
@@ -535,11 +568,9 @@ function startGameLoop(roomCode) {
                                 });
                             }
 
-                            // 넉백 처리 추가
                             if (proj.knockback) {
-                                // 투사체의 이동 방향(vx)을 기준으로 넉백 방향 결정 (오른쪽: 1, 왼쪽: -1)
                                 const knockDir = proj.vx > 0 ? 1 : -1;
-                                enemy.x += knockDir * (proj.knockback / 6); // 맵에서 바로 밀려나도록 조정 (또는 vx에 반영)
+                                enemy.x += knockDir * (proj.knockback / 6);
                             }
 
                             room.screenShake = 6; 
@@ -555,7 +586,8 @@ function startGameLoop(roomCode) {
             players: room.players,
             projectiles: room.projectiles.concat(room.particles || []),
             floatingTexts: room.floatingTexts,
-            screenShake: room.screenShake
+            screenShake: room.screenShake,
+            spectatorCount: room.spectators ? room.spectators.size : 0
         });
 
     }, 1000 / 60);
