@@ -365,7 +365,6 @@
         <div id="skillInfoTab">
             <h3>캐릭터 스킬 및 스탯 상세 설명</h3>
             <div id="skillDescContainer">
-                <!-- 서버 또는 클라이언트 스탯 데이터와 연동되어 동적으로 렌더링됩니다 -->
                 <div class="skill-desc-item">캐릭터를 선택하면 스탯과 스킬 설명이 표시됩니다.</div>
             </div>
         </div>
@@ -413,15 +412,14 @@
     <script>
         const socket = io();
 
-        // 캐릭터별 기본 스탯 및 스킬 설명 맵핑 (서버의 캐릭터 스크립트 변동값과 일치시켜 관리)
         const characterDescriptions = {
-            '김도현': { qDesc: '앞구르기 - 앞으로 구른다', rDesc: '뒤구르기 - 뒤로 구른다', hp: 100, meleeDamage: 40, speed: 5, jumpPower: -12 },
-            '성열진': { qDesc: '우유 좀 줄래 - 사방으로 우유 방출(쿨타임 0.8초)', rDesc: '배싸 - 배 위로 사정(쿨타임 5초)', hp: 100, meleeDamage: 15, speed: 5, jumpPower: -12 },
-            '조겸': { qDesc: '여아 겁탈 - 몹시 흥분하여 대쉬(무제한)', rDesc: '공주페스티벌VIP - 2초간 속도 2배 증가(쿨타임 5초)', hp: 100, meleeDamage: 15, speed: 5, jumpPower: -12 },
-            '강재승': { qDesc: '오른쪽 딸근의 지배자 - 데미지 25, 상대를 멀리 밀침(쿨타임 2초)', rDesc: '불꽃 - 뜨거운 불꽃을 뿜어내어 3초간 화상 데미지 4 부여 (쿨타임 4초)', hp: 100, meleeDamage: 12, speed: 5, jumpPower: -12 },
-            '박준모': { qDesc: '담배빵 - 근접 공격, 0.5초 정지 및 데미지 8(쿨타임 2.5초)', rDesc: '도넛 - 원거리 구멍 뚫린 도넛 모양 구체 3개 발사, 맞으면 밀려남 (쿨타임 3초)', hp: 100, meleeDamage: 10, speed: 5, jumpPower: -12 },
-            '강율': { qDesc: '의사 호출 - 청록색 십자가와 페이드아웃, 체력 20 회복 (쿨타임 4초)', rDesc: '폐 터뜨리기 - 빨간색 파티클을 흘리며 앞으로 대쉬', hp: 100, meleeDamage: 17, speed: 5, jumpPower: -12 },
-            '노관휘': { qDesc: '드럼통 - 파란 드럼통에 상대를 가두어 2.523초간 이동 및 공격 불가 (쿨타임 3초)', rDesc: '너고아니? - 상대방을 맵 맨 끝으로 밀어내 고아 시킴 (쿨타임 2초)', hp: 100, meleeDamage: 12, speed: 5, jumpPower: -12 }
+            '김도현': { qDesc: '앞구르기 - 앞으로 구른다', rDesc: '뒤구르기 - 뒤로 구른다', hp: 180, meleeDamage: 40, speed: 2, jumpPower: 8 },
+            '성열진': { qDesc: '우유 좀 줄래 - 사방으로 우유 방출(쿨타임 0.8초)', rDesc: '배싸 - 배 위로 사정(쿨타임 5초)', hp: 152.3, meleeDamage: 9.523, speed: 10, jumpPower: 11 },
+            '조겸': { qDesc: '여아 겁탈 - 몹시 흥분하여 대쉬(무제한)', rDesc: '공주페스티벌VIP - 2초간 속도 2배 증가(쿨타임 5초)', hp: 100, meleeDamage: 11, speed: 8, jumpPower: 13 },
+            '강재승': { qDesc: '오른쪽 딸근의 지배자 - 데미지 25, 상대를 멀리 밀침(쿨타임 2초)', rDesc: '불꽃 - 뜨거운 불꽃을 뿜어내어 포물선 발사 (쿨타임 3.5초)', hp: 170, meleeDamage: 12, speed: 4.5, jumpPower: 11 },
+            '박준모': { qDesc: '담배빵 - 근접 공격, 0.5초 정지 및 데미지 8(쿨타임 2.5초)', rDesc: '도넛 - 원거리 구멍 뚫린 도넛 모양 구체 3개 발사, 맞으면 밀려남 (쿨타임 3초)', hp: 170, meleeDamage: 10, speed: 10, jumpPower: 13 },
+            '강율': { qDesc: '의사 호출 - 청록색 십자가와 체력 20 회복 (쿨타임 4초)', rDesc: '폐 터뜨리기 - 빨간색 파티클을 흘리며 앞으로 대쉬', hp: 100, meleeDamage: 14, speed: 14, jumpPower: 13 },
+            '노관휘': { qDesc: '드럼통 - 파란 드럼통에 상대를 가두어 2.523초간 이동 및 공격 불가 (쿨타임 3초)', rDesc: '너고아니? - 상대방을 맵 맨 끝으로 밀어내 고아 시킴 (쿨타임 2초)', hp: 152.3, meleeDamage: 7, speed: 6, jumpPower: 9 }
         };
 
         const lobby = document.getElementById('lobby');
@@ -697,7 +695,6 @@
                 selectedCharacter = card.getAttribute('data-char');
                 confirmCharBtn.disabled = false;
 
-                // 선택된 캐릭터의 스탯 및 스킬 정보를 동적으로 설명창에 렌더링
                 const data = characterDescriptions[selectedCharacter];
                 if (data) {
                     skillDescContainer.innerHTML = `
@@ -772,7 +769,7 @@
                         ctx.fillStyle = proj.color || '#fff';
                         ctx.arc(proj.x, proj.y, 4, 0, Math.PI * 2);
                         ctx.fill();
-                    } else if (proj.char === '박준모' || proj.type === 'donut') {
+                    } else if (proj.char === '박준모' || proj.type === 'donut' || proj.isDonutShape) {
                         ctx.strokeStyle = proj.color || '#ff9800';
                         ctx.lineWidth = 3;
                         ctx.arc(proj.x, proj.y, 9, 0, Math.PI * 2);

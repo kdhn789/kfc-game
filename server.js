@@ -25,7 +25,6 @@ if (fs.existsSync(charFolderPath)) {
 
 const rooms = {};
 
-// 대기 중인 방 목록을 모든 클라이언트에게 브로드캐스트하는 헬퍼 함수
 function broadcastRoomList() {
     const waitingRooms = [];
     for (const rCode in rooms) {
@@ -42,7 +41,6 @@ function broadcastRoomList() {
 io.on('connection', (socket) => {
     console.log(`사용자 접속: ${socket.id}`);
 
-    // 접속 시 현재 대기 중인 방 목록 즉시 전달
     const waitingRooms = [];
     for (const rCode in rooms) {
         if (!rooms[rCode].isSingle && rooms[rCode].status === 'waiting') {
@@ -59,6 +57,7 @@ io.on('connection', (socket) => {
         rooms[roomCode] = { 
             players: {}, 
             projectiles: [], 
+            particles: [],
             floatingTexts: [], 
             screenShake: 0, 
             status: 'waiting',
@@ -79,6 +78,7 @@ io.on('connection', (socket) => {
             facing: 'right',
             skillLogic: null,
             rSkillLogic: null,
+            rReleaseLogic: null,
             meleeLogic: null,
             meleeDamage: 15,
             hasUsedGrow: false, hasUsedAwaken: false, lastRangedTime: 0, lastRSkillTime: 0, lastMeleeTime: 0,
@@ -94,13 +94,14 @@ io.on('connection', (socket) => {
         const botStat = CHARACTER_STATS[randomBotChar] || { hp: 100, speed: 3, jumpPower: -12, meleeDamage: 10 };
 
         rooms[roomCode].players['bot'] = {
-            x: 660, y: 300, width: 40, height: 40,
+            x: 660, y: 300, width: 40 * (botStat.scale || 1.0), height: 40 * (botStat.scale || 1.0),
             vx: 0, vy: 0, hp: botStat.hp || 100, maxHp: botStat.hp || 100,
             speed: botStat.speed || 3, jumpPower: botStat.jumpPower || -12, char: randomBotChar,
             isDead: false, isAttacking: false,
             facing: 'left',
             skillLogic: botStat.onQSkill || null,
             rSkillLogic: botStat.onRSkill || null,
+            rReleaseLogic: botStat.onRRelease || null,
             meleeLogic: botStat.onMeleeSkill || null,
             meleeDamage: botStat.meleeDamage || 10,
             hasUsedGrow: false, hasUsedAwaken: false, lastRangedTime: 0, lastRSkillTime: 0, lastMeleeTime: 0,
@@ -123,6 +124,7 @@ io.on('connection', (socket) => {
             rooms[roomCode] = { 
                 players: {}, 
                 projectiles: [], 
+                particles: [],
                 floatingTexts: [], 
                 screenShake: 0, 
                 status: 'waiting',
@@ -152,6 +154,7 @@ io.on('connection', (socket) => {
             facing: playerKeys.length === 0 ? 'right' : 'left',
             skillLogic: null,
             rSkillLogic: null,
+            rReleaseLogic: null,
             meleeLogic: null,
             meleeDamage: 15,
             hasUsedGrow: false, hasUsedAwaken: false, lastRangedTime: 0, lastRSkillTime: 0, lastMeleeTime: 0,
@@ -250,9 +253,8 @@ io.on('connection', (socket) => {
         else if (keys.right) { p.vx = p.speed; p.facing = 'right'; }
         else { p.vx = 0; }
 
-        if (keys.jump && p.y >= 300) { p.vy = p.jumpPower; }
+        if (keys.jump && p.y >= 340 - p.height) { p.vy = p.jumpPower; }
 
-        // 드럼통 등에 갇혀 공격 불가 상태(isSilenced)인 경우 E, Q, SHIFT 공격을 수행하지 못하도록 함
         if (keys.skill && !p.isSilenced) {
             if (p.meleeLogic) {
                 p.meleeLogic(p, rooms[roomCode], socket.id);
@@ -348,6 +350,18 @@ function startGameLoop(roomCode) {
                 ft.life--;
                 if (ft.life <= 0) {
                     room.floatingTexts.splice(i, 1);
+                }
+            }
+        }
+
+        if (room.particles) {
+            for (let i = room.particles.length - 1; i >= 0; i--) {
+                const pt = room.particles[i];
+                pt.x += pt.vx;
+                pt.y += pt.vy;
+                pt.life--;
+                if (pt.life <= 0) {
+                    room.particles.splice(i, 1);
                 }
             }
         }
@@ -532,7 +546,7 @@ function startGameLoop(roomCode) {
 
         io.to(roomCode).emit('game-update', {
             players: room.players,
-            projectiles: room.projectiles,
+            projectiles: room.projectiles.concat(room.particles || []),
             floatingTexts: room.floatingTexts,
             screenShake: room.screenShake
         });

@@ -1,4 +1,3 @@
-// characters/kangyul.js
 module.exports = {
     name: '강율',
     hp: 100,
@@ -8,28 +7,25 @@ module.exports = {
     scale: 1.0,
     image: './images/kangyul.png',
 
-    // Q 스킬: 의사 호출 (머리 위 청록색 십자가, 페이드아웃, 피 20 회복, 쿨타임 4초)
     onQSkill: (p, room, socketId) => {
         if (room.status !== 'playing') return;
 
         const now = Date.now();
-        if (p.lastQSkillTime && now - p.lastQSkillTime < 8000) return; // 쿨타임 4초
+        if (p.lastQSkillTime && now - p.lastQSkillTime < 4000) return;
         p.lastQSkillTime = now;
 
         p.dialogue = "의사 선생님!!!";
         p.dialogueTimer = 90;
 
-        // 체력 20 회복 (최대 체력인 100을 넘지 않도록 처리)
         p.hp = Math.min(p.maxHp, p.hp + 20);
         room.floatingTexts.push({
             x: p.x + p.width / 2,
             y: p.y,
             text: `+20`,
-            color: '#00d1a7', // 청록색 계열
+            color: '#00d1a7',
             life: 20
         });
 
-        // 머리 위로 청록색 십자가 및 페이드아웃 효과를 위한 파티클/텍스트 오브젝트 생성
         room.projectiles.push({
             x: p.x + p.width / 2,
             y: p.y - 15,
@@ -41,7 +37,6 @@ module.exports = {
         });
     },
 
-    // SHIFT(R) 스킬: 폐 터뜨리기 (빨간색 파티클을 흘리며 앞으로 대쉬, 공격 스킬 없음)
     onRSkill: (p, room, socketId) => {
         if (room.status !== 'playing') return;
 
@@ -57,7 +52,6 @@ module.exports = {
         if (p.x < 0) p.x = 0;
         if (p.x > 800 - p.width) p.x = 800 - p.width;
 
-        // 빨간색 파티클 흘리기
         for (let i = 0; i < 6; i++) {
             room.projectiles.push({
                 x: p.x + p.width / 2,
@@ -66,11 +60,11 @@ module.exports = {
                 vy: (Math.random() - 0.5) * 6,
                 color: '#ae1f1f',
                 type: 'particle',
+                life: 30
             });
         }
     },
 
-    // 공격하면 자기 피 1 닳는 기능 유지 (직접 room.status를 건드리지 않고 hp만 깎아서 서버 루프가 안전하게 감지하도록 수정)
     onMeleeSkill: (p, room, socketId) => {
         if (room.status !== 'playing') return;
 
@@ -105,6 +99,7 @@ module.exports = {
                             y: enemy.y,
                             text: `-${p.meleeDamage}`,
                             color: '#be2431',
+                            life: 30
                         });
                     }
                     

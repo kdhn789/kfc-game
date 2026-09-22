@@ -7,10 +7,9 @@ module.exports = {
     image: './images/kimdohyun.png',
     scale: 1.4,
 
-    // E 스킬 (김도현 전용 근접 공격 - 2초 쿨타임)
     onMeleeSkill: (p, room, socketId) => {
         const now = Date.now();
-        const cooldown = 3000; // 2초 쿨타임
+        const cooldown = 3000;
 
         if (!p.lastMeleeTime || now - p.lastMeleeTime >= cooldown) {
             p.lastMeleeTime = now;
@@ -42,13 +41,6 @@ module.exports = {
                         const knockDir = p.facing === 'right' ? 1 : -1;
                         enemy.x += knockDir * 40; 
                         room.screenShake = 10; 
-
-                        if (enemy.hp <= 0 && !(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
-                            enemy.hp = 0;
-                            enemy.isDead = true;
-                            room.status = 'ended';
-                            // 게임 종료 처리 필요시 연동
-                        }
                     }
                 }
             }
@@ -57,7 +49,6 @@ module.exports = {
         }
     },
 
-    // Q 스킬: 앞으로 구르기
     onQSkill: (p, room, socketId) => {
         const now = Date.now();
         const cooldown = 300;
@@ -77,7 +68,6 @@ module.exports = {
         }
     },
 
-    // R 스킬: 뒤로 구르기
     onRSkill: (p, room, socketId) => {
         const now = Date.now();
         const cooldown = 300;

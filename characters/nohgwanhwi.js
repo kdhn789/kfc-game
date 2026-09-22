@@ -5,12 +5,11 @@ module.exports = {
     jumpPower: -9,
     meleeDamage: 7,
     image: './images/nohgwanhwi.png',
-    scale: 1,
+    scale: 1.0,
 
-    // Q 스킬: 드럼통 (노란색 범위 표시 및 더 진하고 선명한 푸른색 드럼통 사각형으로 상대 속박 및 공격 금지)
     onQSkill: (p, room, socketId) => {
         const now = Date.now();
-        const cooldown = 3000; // 3초 쿨타임
+        const cooldown = 3000;
 
         if (!p.lastQSkillTime || now - p.lastQSkillTime >= cooldown) {
             p.lastQSkillTime = now;
@@ -48,7 +47,7 @@ module.exports = {
                         enemy.vx = 0;
                         enemy.isTrapped = true;
                         enemy.isDrumTrapped = true; 
-                        enemy.isSilenced = true; // 드럼통에 갇힌 동안 공격 불가 상태 부여
+                        enemy.isSilenced = true;
 
                         room.floatingTexts.push({
                             x: enemy.x + enemy.width / 2,
@@ -65,14 +64,13 @@ module.exports = {
                                 enemy.isDrumTrapped = false;
                                 enemy.isSilenced = false;
                             }
-                        }, 2.523); // 2.523초 속박 및 공격 불가
+                        }, 2523);
                     }
                 }
             }
         }
     },
 
-    // SHIFT 스킬: 너고아니?
     onRSkill: (p, room, socketId) => {
         const now = Date.now();
         const cooldown = 2000;

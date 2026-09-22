@@ -1,12 +1,12 @@
 module.exports = {
     name: '강재승',
-    hp: 170,          // 묵직한 체력
+    hp: 170,
     speed: 4.5,
     jumpPower: -11,
     meleeDamage: 12,
-    image: './images/kangjaeseung.png', // 캐릭터 이미지 파일 경로
+    image: './images/kangjaeseung.png',
+    scale: 1.0,
 
-    // Q 스킬: 밀치기 (데미지 10, 멀리 넉백, 쿨타임 2초)
     onQSkill: (p, room, socketId) => {
         const now = Date.now();
         if (!p.lastQSkillTime || now - p.lastQSkillTime >= 2000) {
@@ -19,7 +19,6 @@ module.exports = {
                     const enemy = room.players[id];
                     if (enemy.isDead) continue;
 
-                    // 전방 넓은 밀치기 판정 박스
                     const pushBox = {
                         x: p.facing === 'right' ? p.x + p.width : p.x - 50,
                         y: p.y,
@@ -30,11 +29,11 @@ module.exports = {
                     if (pushBox.x < enemy.x + enemy.width &&
                         pushBox.x + pushBox.width > enemy.x &&
                         pushBox.y < enemy.y + enemy.height &&
-                        pushBox.y + pushBox.height > enemy.y) {
+                        pushBox.y + enemy.height > enemy.y) {
                         
                         enemy.hp -= 25;
                         const knockDir = p.facing === 'right' ? 1 : -1;
-                        enemy.x += knockDir * 190; // 아주 멀리 밀쳐냄!
+                        enemy.x += knockDir * 190;
                         room.screenShake = 20;
 
                         if (enemy.hp <= 0) {
@@ -52,7 +51,6 @@ module.exports = {
         }
     },
 
-    // Shift 스킬: 울할매 뜨끈불가마 (빨간색 불 분수 16발 포물선 난사, 쿨타임 3초)
     onRSkill: (p, room, socketId) => {
         const now = Date.now();
         if (!p.lastRSkillTime || now - p.lastRSkillTime >= 3500) {
@@ -60,7 +58,7 @@ module.exports = {
 
             const totalBullets = 12;
             for (let i = 0; i < totalBullets; i++) {
-                const angle = (Math.random() * 140 + 200) * (Math.PI / 180); // 위쪽으로 포물선 발사
+                const angle = (Math.random() * 140 + 200) * (Math.PI / 180);
                 const speed = Math.random() * 6 + 5;
 
                 room.projectiles.push({
@@ -68,9 +66,9 @@ module.exports = {
                     y: p.y,
                     vx: Math.cos(angle) * speed,
                     vy: Math.sin(angle) * speed,
-                    gravity: 0.3, // 포물선 중력
+                    gravity: 0.3,
                     owner: socketId,
-                    color: '#ff4500' // 뜨거운 주황/빨간 불꽃 색상
+                    color: '#ff4500'
                 });
             }
 
