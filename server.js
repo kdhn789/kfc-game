@@ -534,7 +534,14 @@ function startGameLoop(roomCode) {
                                     life: 30
                                 });
                             }
-                            
+
+                            // 넉백 처리 추가
+                            if (proj.knockback) {
+                                // 투사체의 이동 방향(vx)을 기준으로 넉백 방향 결정 (오른쪽: 1, 왼쪽: -1)
+                                const knockDir = proj.vx > 0 ? 1 : -1;
+                                enemy.x += knockDir * (proj.knockback / 6); // 맵에서 바로 밀려나도록 조정 (또는 vx에 반영)
+                            }
+
                             room.screenShake = 6; 
                             room.projectiles.splice(i, 1);
                             break;
