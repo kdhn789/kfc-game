@@ -1,8 +1,8 @@
 module.exports = {
     name: '노관휘',
-    hp: 150,
+    hp: 152.3,
     speed: 6,
-    jumpPower: -8,
+    jumpPower: -9,
     meleeDamage: 7,
     image: './images/nohgwanhwi.png',
     scale: 1,
