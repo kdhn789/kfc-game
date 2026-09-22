@@ -131,14 +131,12 @@ io.on('connection', (socket) => {
     });
 
     socket.on('join-room', (roomCode) => {
-        // [수정] 다른 방에 남아있던 소켓 룸을 모두 떠나게 하여 방 중첩/난입 현상 방지
         for (const rCode of socket.rooms) {
             if (rCode !== socket.id) {
                 socket.leave(rCode);
             }
         }
 
-        // 기존에 플레이하던 방 데이터 정리
         if (socket.roomCode && rooms[socket.roomCode]) {
             const oldRoom = rooms[socket.roomCode];
             if (oldRoom.spectators) oldRoom.spectators.delete(socket.id);
@@ -163,7 +161,6 @@ io.on('connection', (socket) => {
         const room = rooms[roomCode];
         const playerKeys = Object.keys(room.players);
 
-        // 플레이어 정원이 찼거나 이미 게임 중인 경우 완벽하게 방관자로 처리
         if (playerKeys.length >= 2 || room.status === 'playing' || room.status === 'waiting_countdown' || room.status === 'playing_prep') {
             if (!room.spectators) room.spectators = new Set();
             room.spectators.add(socket.id);
@@ -237,7 +234,7 @@ io.on('connection', (socket) => {
 
     socket.on('select-character', (charName) => {
         const roomCode = socket.roomCode;
-        if (!rooms[roomCode] || socket.isSpectator) return; // 방관자 선택 원천 차단
+        if (!rooms[roomCode] || socket.isSpectator) return;
 
         const room = rooms[roomCode];
         const p = room.players[socket.id];
@@ -289,7 +286,7 @@ io.on('connection', (socket) => {
     socket.on('player-input', (keys) => {
         const roomCode = socket.roomCode;
         if (!rooms[roomCode] || rooms[roomCode].status !== 'playing') return;
-        if (socket.isSpectator) return; // 방관자 입력 무시
+        if (socket.isSpectator) return;
         const p = rooms[roomCode].players[socket.id];
         if (!p || p.isDead) return;
 
@@ -364,10 +361,12 @@ io.on('connection', (socket) => {
         const roomCode = socket.roomCode;
         if (roomCode && rooms[roomCode]) {
             const room = rooms[roomCode];
+            // [수정] 관전자가 방을 나갈 때 안전하게 처리
             if (room.spectators && room.spectators.has(socket.id)) {
                 room.spectators.delete(socket.id);
                 socket.leave(roomCode);
                 socket.isSpectator = false;
+                socket.roomCode = null; // 소켓의 방 코드 참조 제거
                 broadcastRoomList();
                 return;
             }
@@ -375,6 +374,7 @@ io.on('connection', (socket) => {
             delete rooms[roomCode];
             broadcastRoomList();
         }
+        socket.roomCode = null;
     });
 
     socket.on('disconnect', () => {
@@ -382,6 +382,7 @@ io.on('connection', (socket) => {
         const roomCode = socket.roomCode;
         if (roomCode && rooms[roomCode]) {
             const room = rooms[roomCode];
+            // [수정] 관전자가 나갈 때는 게임을 폭파(delete rooms)하거나 game-over를 보내지 않고 관전자 목록만 제거
             if (room.spectators && room.spectators.has(socket.id)) {
                 room.spectators.delete(socket.id);
                 broadcastRoomList();
