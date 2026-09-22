@@ -657,7 +657,12 @@
         }
         waitExitBtn.addEventListener('click', returnToLobby);
         charExitBtn.addEventListener('click', returnToLobby);
-        gameExitBtn.addEventListener('click', returnToLobby);
+        
+        // [수정] 게임방 나가기 클릭 시 서버에 방 퇴장/삭제 요청을 보내도록 수정
+        gameExitBtn.addEventListener('click', () => {
+            socket.emit('leave-room');
+            window.location.reload();
+        });
 
         socket.on('update-room', (count) => {
             statusText.innerText = `현재 호실 인원: ${count}명 (상대를 기다리는 중...)`;
@@ -698,14 +703,13 @@
             displayRoomCode.innerText = currentRoom;
         };
 
-        // 관전 모드로 바로 진입할 때 처리
         socket.on('start-spectating', (data) => {
             isSpectating = true;
             waitingRoom.classList.add('hidden');
             charSelectRoom.classList.add('hidden');
             gameRoom.classList.remove('hidden');
             gameHeaderTitle.innerText = `호실 ${currentRoom} 관전 중`;
-            if (mobileControls) mobileControls.style.display = 'none'; // 관전자는 조작 패널 숨김
+            if (mobileControls) mobileControls.style.display = 'none';
         });
 
         socket.on('start-character-select', () => {
@@ -773,7 +777,6 @@
         }
 
         socket.on('game-update', (state) => {
-            // 관전 중인데 게임방 화면이 아니라면 화면 전환
             if (isSpectating && gameRoom.classList.contains('hidden')) {
                 waitingRoom.classList.add('hidden');
                 charSelectRoom.classList.add('hidden');
@@ -799,13 +802,12 @@
             ctx.lineTo(800, 340);
             ctx.stroke();
 
-            // 관전자 수 표출 (우측 상단 텍스트)
             if (state.spectatorCount !== undefined) {
                 ctx.fillStyle = '#ff9800';
                 ctx.font = 'bold 16px Arial';
                 ctx.textAlign = 'right';
-                ctx.fillText(`👀 관전 중: ${state.spectatorCount}명`, canvas.width - 20, 30);
-                ctx.textAlign = 'left'; // 원복
+                ctx.fillText(`방관자: ${state.spectatorCount}명`, canvas.width - 20, 30);
+                ctx.textAlign = 'left';
             }
 
             if (state.projectiles) {

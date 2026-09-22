@@ -32,7 +32,6 @@ function broadcastRoomList() {
             const playerCount = Object.keys(rooms[rCode].players).length;
             const spectatorCount = rooms[rCode].spectators ? rooms[rCode].spectators.size : 0;
             
-            // 대기 중이거나 진행 중인 방 모두 목록에 표시 (관전 가능하도록)
             roomListInfo.push({
                 roomCode: rCode,
                 playerCount: playerCount,
@@ -47,7 +46,6 @@ function broadcastRoomList() {
 io.on('connection', (socket) => {
     console.log(`사용자 접속: ${socket.id}`);
 
-    // 접속 시 현재 방 목록 전송
     const roomListInfo = [];
     for (const rCode in rooms) {
         if (!rooms[rCode].isSingle) {
@@ -149,7 +147,6 @@ io.on('connection', (socket) => {
         const room = rooms[roomCode];
         const playerKeys = Object.keys(room.players);
 
-        // 방이 꽉 찼거나 이미 게임/진행 중인 경우 관전으로 처리
         if (playerKeys.length >= 2 || room.status === 'playing' || room.status === 'waiting_countdown' || room.status === 'playing_prep') {
             if (!room.spectators) room.spectators = new Set();
             room.spectators.add(socket.id);
@@ -273,7 +270,7 @@ io.on('connection', (socket) => {
     socket.on('player-input', (keys) => {
         const roomCode = socket.roomCode;
         if (!rooms[roomCode] || rooms[roomCode].status !== 'playing') return;
-        if (socket.isSpectator) return; // 관전자는 입력 불가
+        if (socket.isSpectator) return;
         const p = rooms[roomCode].players[socket.id];
         if (!p || p.isDead) return;
 
@@ -341,6 +338,22 @@ io.on('connection', (socket) => {
             if (p.rReleaseLogic) {
                 p.rReleaseLogic(p);
             }
+        }
+    });
+
+    // [수정] 게임방을 명시적으로 나갈 때 처리하는 이벤트 추가
+    socket.on('leave-room', () => {
+        const roomCode = socket.roomCode;
+        if (roomCode && rooms[roomCode]) {
+            const room = rooms[roomCode];
+            if (room.spectators && room.spectators.has(socket.id)) {
+                room.spectators.delete(socket.id);
+                broadcastRoomList();
+                return;
+            }
+            if (room.gameInterval) clearInterval(room.gameInterval);
+            delete rooms[roomCode];
+            broadcastRoomList();
         }
     });
 
@@ -492,7 +505,14 @@ function startGameLoop(roomCode) {
                     room.status = 'ended';
                     const killerId = Object.keys(room.players).find(k => k !== id);
                     io.to(roomCode).emit('game-over', { winner: killerId });
-                    clearInterval(room.gameInterval);
+                    
+                    // [수정] 게임 종료 시 루프 인터벌 즉시 정리 및 방 정보 정리
+                    if (room.gameInterval) {
+                        clearInterval(room.gameInterval);
+                        room.gameInterval = null;
+                    }
+                    delete rooms[roomCode];
+                    broadcastRoomList();
                     return;
                 }
             }
