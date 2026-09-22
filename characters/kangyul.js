@@ -89,7 +89,7 @@ module.exports = {
         if (room.status !== 'playing') return;
 
         const now = Date.now();
-        if (p.lastRSkillTime && now - p.lastRSkillTime < 2000) return; // 쿨타임 2초로 단축
+        if (p.lastRSkillTime && now - p.lastRSkillTime < 1500) return; // 쿨타임 2초로 단축
         p.lastRSkillTime = now;
 
         p.dialogue = "내 폐!";
@@ -128,8 +128,8 @@ module.exports = {
                     room.floatingTexts.push({
                         x: enemy.x + enemy.width / 2,
                         y: enemy.y,
-                        text: `-35`,
-                        color: '#00cec9',
+                        text: `-25`,
+                        color: '#b21d0c',
                         life: 30
                     });
                 }
