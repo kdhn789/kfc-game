@@ -324,7 +324,7 @@
             <div class="skill-desc-item"><strong>조겸:</strong> Q(여아 겁탈) - 몹시 흥분하여 대쉬(무제한) | E(기본 공격) - 데미지 15 | SHIFT(공주페스티벌VIP) - 2초간 속도 2배 증가(쿨타임 5초)</div>
             <div class="skill-desc-item"><strong>강재승:</strong> Q(오른쪽 딸근의 지배자) - 데미지 25, 상대를 멀리 밀침(쿨타임 2초) | E(기본 타격) - 데미지 12 | SHIFT(불꽃) - 뜨거운 불꽃을 뿜어내어 3초간 화상 데미지 4 부여 (쿨타임 4초)</div>
             <div class="skill-desc-item"><strong>박준모:</strong> Q(담배빵) - 근접 공격, 0.5초 정지 및 데미지 8(쿨타임 2.5초) | E(기본 타격) - 데미지 10 | SHIFT(도넛) - 원거리 구멍 뚫린 도넛 모양 구체 3개 발사, 맞으면 밀려남 (쿨타임 3초)</div>
-            <div class="skill-desc-item"><strong>강율:</strong> Q(심장 터뜨리기) - 자폭 강력한 일격 데미지 30 (쿨타임 2초) | E(기본 타격) - 데미지 15 | SHIFT(폐 터뜨리기) - 빠르게 이동하며 회피 (쿨타임 4초)</div>
+            <div class="skill-desc-item"><strong>강율:</strong> Q(심장 터뜨리기) - 체력 소모 강력한 일격 데미지 30 (사망 위험 시 사용 불가) | E(기본 타격) - 데미지 15 | SHIFT(폐 터뜨리기) - 빠르게 이동하며 회피 및 근접 범위 데미지 8 (쿨타임 4초)</div>
         </div>
 
         <br>
@@ -670,7 +670,6 @@
             ctx.lineTo(800, 340);
             ctx.stroke();
 
-            // 투사체 및 파티클 렌더링
             if (state.projectiles) {
                 state.projectiles.forEach(proj => {
                     ctx.beginPath();
