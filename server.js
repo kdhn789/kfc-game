@@ -43,74 +43,47 @@ function broadcastRoomList() {
     io.emit('room-list-update', roomListInfo);
 }
 
-// 다음 웨이브 봇 스폰 함수
-function spawnNextWaveBot(room) {
-    room.waveSub++;
-    if (room.waveSub > 3) {
-        room.waveMain++;
-        room.waveSub = 1;
-    }
-
-    // 앞자리(예: 1-1, 2-1) 시작 시 플레이어 체력 완전 회복
-    if (room.waveSub === 1) {
-        const playerSocketId = Object.keys(room.players).find(id => id !== 'bot');
-        if (playerSocketId && room.players[playerSocketId]) {
-            const p = room.players[playerSocketId];
-            p.hp = p.maxHp;
-            room.floatingTexts.push({
-                x: p.x + p.width / 2,
-                y: p.y - 10,
-                text: `WAVE ${room.waveMain}-${room.waveSub}! FULL HP!`,
-                color: '#2ecc71',
-                life: 60
-            });
-        }
-    } else {
-        const playerSocketId = Object.keys(room.players).find(id => id !== 'bot');
-        if (playerSocketId && room.players[playerSocketId]) {
-            const p = room.players[playerSocketId];
-            room.floatingTexts.push({
-                x: p.x + p.width / 2,
-                y: p.y - 10,
-                text: `WAVE ${room.waveMain}-${room.waveSub}!`,
-                color: '#ff9800',
-                life: 60
-            });
+// 웨이브에 따른 봇 생성 헬퍼 함수
+function spawnBotsForWave(room, waveMain) {
+    // 기존 봇 제거
+    for (let id in room.players) {
+        if (id.startsWith('bot_')) {
+            delete room.players[id];
         }
     }
 
     const botCharKeys = Object.keys(CHARACTER_STATS);
-    const randomBotChar = botCharKeys.length > 0 ? botCharKeys[Math.floor(Math.random() * botCharKeys.length)] : '성열진';
-    const botStat = CHARACTER_STATS[randomBotChar] || { hp: 100, speed: 3, jumpPower: -12, meleeDamage: 10 };
+    for (let i = 0; i < waveMain; i++) {
+        const botId = `bot_${i + 1}`;
+        const randomBotChar = botCharKeys.length > 0 ? botCharKeys[Math.floor(Math.random() * botCharKeys.length)] : '성열진';
+        const botStat = CHARACTER_STATS[randomBotChar] || { hp: 100, speed: 3, jumpPower: -12, meleeDamage: 10 };
 
-    // 웨이브가 높아질수록 봇 스탯 강화
-    const scaleFactor = 1 + (room.waveMain - 1) * 0.3 + (room.waveSub - 1) * 0.1;
-
-    room.players['bot'] = {
-        x: 660, y: 300, width: 40 * (botStat.scale || 1.0), height: 40 * (botStat.scale || 1.0),
-        vx: 0, vy: 0, hp: (botStat.hp || 100) * scaleFactor, maxHp: (botStat.hp || 100) * scaleFactor,
-        speed: (botStat.speed || 3) * Math.min(scaleFactor, 1.5), jumpPower: botStat.jumpPower || -12, char: randomBotChar,
-        isDead: false, isAttacking: false,
-        facing: 'left',
-        skillLogic: botStat.onQSkill || null,
-        rSkillLogic: botStat.onRSkill || null,
-        rReleaseLogic: botStat.onRRelease || null,
-        meleeLogic: botStat.onMeleeSkill || null,
-        meleeDamage: (botStat.meleeDamage || 10) * scaleFactor,
-        hasUsedGrow: false, hasUsedAwaken: false, lastRangedTime: 0, lastRSkillTime: 0, lastMeleeTime: 0,
-        lastQSkillTime: 0,
-        dialogue: '',       
-        dialogueTimer: 0,
-        burnTimer: 0, 
-        burnTicks: 0,
-        isSilenced: false,
-        isBot: true,
-        botTimer: 0
-    };
+        room.players[botId] = {
+            x: 500 + (i * 60), y: 300, width: 40 * (botStat.scale || 1.0), height: 40 * (botStat.scale || 1.0),
+            vx: 0, vy: 0, hp: botStat.hp || 100, maxHp: botStat.hp || 100,
+            speed: botStat.speed || 3, jumpPower: botStat.jumpPower || -12, char: randomBotChar,
+            isDead: false, isAttacking: false,
+            facing: 'left',
+            skillLogic: botStat.onQSkill || null,
+            rSkillLogic: botStat.onRSkill || null,
+            rReleaseLogic: botStat.onRRelease || null,
+            meleeLogic: botStat.onMeleeSkill || null,
+            meleeDamage: botStat.meleeDamage || 10,
+            hasUsedGrow: false, hasUsedAwaken: false, lastRangedTime: 0, lastRSkillTime: 0, lastMeleeTime: 0,
+            lastQSkillTime: 0,
+            dialogue: '',       
+            dialogueTimer: 0,
+            burnTimer: 0, 
+            burnTicks: 0,
+            isSilenced: false,
+            isBot: true,
+            botTimer: 0
+        };
+    }
 }
 
 io.on('connection', (socket) => {
-    console.log(`사용자 접속: ${socket.id}[cite: 1]`);
+    console.log(`사용자 접속: ${socket.id}`);
 
     const roomListInfo = [];
     for (const rCode in rooms) {
@@ -127,9 +100,7 @@ io.on('connection', (socket) => {
     }
     socket.emit('room-list-update', roomListInfo);
 
-    socket.on('start-single-play', (data) => {
-        const difficulty = typeof data === 'object' ? data.difficulty : data;
-        const mode = typeof data === 'object' ? data.mode : 'normal'; // 'normal' 또는 'wave'
+    socket.on('start-single-play', (difficulty) => {
         const roomCode = 'single_' + socket.id;
         
         rooms[roomCode] = { 
@@ -142,10 +113,10 @@ io.on('connection', (socket) => {
             status: 'waiting',
             gameInterval: null,
             isSingle: true,
-            isWaveMode: (mode === 'wave'),
-            waveMain: 1,
-            waveSub: 0,
-            botDifficulty: difficulty || 'normal'
+            botDifficulty: difficulty || 'normal',
+            isWaveMode: (difficulty === 'wave'),
+            waveSub: 1, // 1-1, 1-2, 1-3 중 소블록
+            waveMain: 1 // 웨이브 앞자리 (1-1이면 1)
         };
 
         socket.join(roomCode);
@@ -172,7 +143,7 @@ io.on('connection', (socket) => {
         };
 
         if (rooms[roomCode].isWaveMode) {
-            spawnNextWaveBot(rooms[roomCode]);
+            spawnBotsForWave(rooms[roomCode], 1);
         } else {
             const botCharKeys = Object.keys(CHARACTER_STATS);
             const randomBotChar = botCharKeys.length > 0 ? botCharKeys[Math.floor(Math.random() * botCharKeys.length)] : '성열진';
@@ -396,13 +367,13 @@ io.on('connection', (socket) => {
                             attackBox.y < enemy.y + enemy.height &&
                             attackBox.y + enemy.height > enemy.y) {
                             
-                            if (!(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
+                            if (!(room.isSingle && room.botDifficulty === 'sandbag' && id.startsWith('bot'))) {
                                 enemy.hp -= p.meleeDamage;
                                 if (enemy.hp < 0) enemy.hp = 0;
                                 room.floatingTexts.push({
                                     x: enemy.x + enemy.width / 2,
                                     y: enemy.y,
-                                    text: `-${Math.round(p.meleeDamage)}`,
+                                    text: `-${p.meleeDamage}`,
                                     color: '#ff4757',
                                     life: 30
                                 });
@@ -513,54 +484,98 @@ function startGameLoop(roomCode) {
         }
 
         if (room.status === 'playing') {
-            if (room.isSingle && room.players['bot']) {
-                const bot = room.players['bot'];
-                const playerSocketId = Object.keys(room.players).find(id => id !== 'bot');
+            if (room.isSingle) {
+                const playerSocketId = Object.keys(room.players).find(id => !id.startsWith('bot'));
                 const player = room.players[playerSocketId];
 
-                // 웨이브 모드에서 봇이 죽었을 경우 다음 웨이브 진행
-                if (bot.isDead) {
-                    if (room.isWaveMode) {
-                        spawnNextWaveBot(room);
+                // 웨이브 모드 체크: 모든 봇이 죽었는지 확인
+                if (room.isWaveMode) {
+                    let allBotsDead = true;
+                    for (let id in room.players) {
+                        if (id.startsWith('bot_')) {
+                            if (!room.players[id].isDead && room.players[id].hp > 0) {
+                                allBotsDead = false;
+                                break;
+                            }
+                        }
                     }
-                } else if (player && !player.isDead) {
-                    const diff = room.botDifficulty;
-                    if (diff !== 'sandbag') {
-                        bot.botTimer++;
-                        const dx = player.x - bot.x;
-                        const distance = Math.abs(dx);
-                        
-                        let moveSpeed = bot.speed * 0.75;
-                        if (diff === 'easy') moveSpeed *= 0.5;
-                        if (diff === 'hard') moveSpeed *= 1.0;
 
-                        if (distance > 35) {
-                            bot.vx = dx > 0 ? moveSpeed : -moveSpeed;
-                            bot.facing = dx > 0 ? 'right' : 'left';
+                    if (allBotsDead) {
+                        // 다음 웨이브로 진행
+                        room.waveSub++;
+                        if (room.waveSub > 3) {
+                            room.waveMain++;
+                            room.waveSub = 1;
+                        }
+
+                        // 앞자리(1-1, 2-1 등)가 바뀔 때 플레이어 피 무한 회복
+                        if (room.waveSub === 1 && player) {
+                            player.hp = player.maxHp;
+                            room.floatingTexts.push({
+                                x: player.x + player.width / 2,
+                                y: player.y - 15,
+                                text: `WAVE ${room.waveMain}-${room.waveSub}! HP FULL!`,
+                                color: '#4CAF50',
+                                life: 60
+                            });
                         } else {
-                            bot.vx = 0;
+                            room.floatingTexts.push({
+                                x: 400,
+                                y: 100,
+                                text: `WAVE ${room.waveMain}-${room.waveSub} START!`,
+                                color: '#ff9800',
+                                life: 60
+                            });
                         }
 
-                        const now = Date.now();
-                        const qCooldown = 2000;
-                        const rCooldown = 2000;
-                        const skillChance = diff === 'hard' ? 0.04 : 0.015;
-                        
-                        if (bot.skillLogic && Math.random() < skillChance && !bot.isSilenced) {
-                            if (!bot.lastQSkillTime || now - bot.lastQSkillTime >= qCooldown) {
-                                bot.skillLogic(bot, room, 'bot');
-                                bot.lastQSkillTime = now;
-                            }
-                        }
+                        spawnBotsForWave(room, room.waveMain);
+                    }
+                }
 
-                        if (bot.rSkillLogic && Math.random() < (skillChance * 0.7) && !bot.isSilenced) {
-                            if (!bot.lastRSkillTime || now - bot.lastRSkillTime >= rCooldown) {
-                                bot.rSkillLogic(bot, room, 'bot');
-                                bot.lastRSkillTime = now;
+                // 봇 AI 이동 처리
+                for (let id in room.players) {
+                    if (id.startsWith('bot') || id === 'bot') {
+                        const bot = room.players[id];
+                        if (!bot.isDead && player && !player.isDead) {
+                            const diff = room.botDifficulty;
+                            if (diff !== 'sandbag') {
+                                bot.botTimer++;
+                                const dx = player.x - bot.x;
+                                const distance = Math.abs(dx);
+                                
+                                let moveSpeed = bot.speed * 0.75;
+                                if (diff === 'easy') moveSpeed *= 0.5;
+                                if (diff === 'hard') moveSpeed *= 1.0;
+
+                                if (distance > 35) {
+                                    bot.vx = dx > 0 ? moveSpeed : -moveSpeed;
+                                    bot.facing = dx > 0 ? 'right' : 'left';
+                                } else {
+                                    bot.vx = 0;
+                                }
+
+                                const now = Date.now();
+                                const qCooldown = 2000;
+                                const rCooldown = 2000;
+                                const skillChance = diff === 'hard' ? 0.04 : 0.015;
+                                
+                                if (bot.skillLogic && Math.random() < skillChance && !bot.isSilenced) {
+                                    if (!bot.lastQSkillTime || now - bot.lastQSkillTime >= qCooldown) {
+                                        bot.skillLogic(bot, room, id);
+                                        bot.lastQSkillTime = now;
+                                    }
+                                }
+
+                                if (bot.rSkillLogic && Math.random() < (skillChance * 0.7) && !bot.isSilenced) {
+                                    if (!bot.lastRSkillTime || now - bot.lastRSkillTime >= rCooldown) {
+                                        bot.rSkillLogic(bot, room, id);
+                                        bot.lastRSkillTime = now;
+                                    }
+                                }
+                            } else {
+                                bot.vx = 0;
                             }
                         }
-                    } else {
-                        bot.vx = 0;
                     }
                 }
             }
@@ -606,14 +621,25 @@ function startGameLoop(roomCode) {
                 const p = room.players[id];
                 if (!p.isDead && p.hp <= 0) {
                     p.hp = 0;
-                    if (id === 'bot' && room.isWaveMode) {
-                        p.isDead = true; // 봇 사망 시 상단 로직(spawnNextWaveBot)에서 처리됨
+                    p.isDead = true;
+                    // 싱글/웨이브 모드에서 플레이어가 죽었을 때만 게임 종료
+                    if (room.isSingle) {
+                        const playerSocketId = Object.keys(room.players).find(k => !k.startsWith('bot'));
+                        if (id === playerSocketId) {
+                            room.status = 'ended';
+                            io.to(roomCode).emit('game-over', { winner: 'bot' });
+                            if (room.gameInterval) {
+                                clearInterval(room.gameInterval);
+                                room.gameInterval = null;
+                            }
+                            delete rooms[roomCode];
+                            broadcastRoomList();
+                            return;
+                        }
                     } else {
-                        p.isDead = true;
                         room.status = 'ended';
                         const killerId = Object.keys(room.players).find(k => k !== id);
-                        io.to(roomCode).emit('game-over', { winner: killerId, waveInfo: room.isWaveMode ? `${room.waveMain}-${room.waveSub}` : null });
-                        
+                        io.to(roomCode).emit('game-over', { winner: killerId });
                         if (room.gameInterval) {
                             clearInterval(room.gameInterval);
                             room.gameInterval = null;
@@ -625,22 +651,25 @@ function startGameLoop(roomCode) {
                 }
             }
 
+            // 캐릭터들끼리 몸 겹침 및 밟기 방지 (찐따플레이 룰)
             const playerIds = Object.keys(room.players);
-            if (playerIds.length === 2) {
-                const p1 = room.players[playerIds[0]];
-                const p2 = room.players[playerIds[1]];
+            for (let i = 0; i < playerIds.length; i++) {
+                for (let j = i + 1; j < playerIds.length; j++) {
+                    const p1 = room.players[playerIds[i]];
+                    const p2 = room.players[playerIds[j]];
 
-                if (!p1.isDead && !p2.isDead) {
-                    if (p1.x < p2.x + p2.width && p1.x + p1.width > p2.x &&
-                        p1.y < p2.y + p2.height && p1.y + p1.height > p2.y) {
-                        
-                        const overlapX = Math.min(p1.x + p1.width - p2.x, p2.x + p2.width - p1.x);
-                        if (p1.x < p2.x) {
-                            p1.x -= overlapX / 2;
-                            p2.x += overlapX / 2;
-                        } else {
-                            p1.x += overlapX / 2;
-                            p2.x -= overlapX / 2;
+                    if (!p1.isDead && !p2.isDead) {
+                        if (p1.x < p2.x + p2.width && p1.x + p1.width > p2.x &&
+                            p1.y < p2.y + p2.height && p1.y + p1.height > p2.y) {
+                            
+                            const overlapX = Math.min(p1.x + p1.width - p2.x, p2.x + p2.width - p1.x);
+                            if (p1.x < p2.x) {
+                                p1.x -= overlapX / 2;
+                                p2.x += overlapX / 2;
+                            } else {
+                                p1.x += overlapX / 2;
+                                p2.x -= overlapX / 2;
+                            }
                         }
                     }
                 }
@@ -684,13 +713,13 @@ function startGameLoop(roomCode) {
                             proj.y + pHeight > enemy.y) {
                             
                             const dmg = proj.damage || 6;
-                            if (!(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
+                            if (!(room.isSingle && room.botDifficulty === 'sandbag' && id.startsWith('bot'))) {
                                 enemy.hp -= dmg;
                                 if (enemy.hp < 0) enemy.hp = 0;
                                 room.floatingTexts.push({
                                     x: enemy.x + enemy.width / 2,
                                     y: enemy.y,
-                                    text: `-${Math.round(dmg)}`,
+                                    text: `-${dmg}`,
                                     color: '#ff4757',
                                     life: 30
                                 });
@@ -716,9 +745,7 @@ function startGameLoop(roomCode) {
             floatingTexts: room.floatingTexts,
             screenShake: room.screenShake,
             spectatorCount: room.spectators ? room.spectators.size : 0,
-            waveMain: room.waveMain,
-            waveSub: room.waveSub,
-            isWaveMode: room.isWaveMode
+            waveInfo: room.isWaveMode ? `${room.waveMain}-${room.waveSub}` : null
         });
 
     }, 1000 / 60);

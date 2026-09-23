@@ -242,13 +242,13 @@
             background: #444;
             color: white;
             border: 2px solid #ff9800;
-            padding: 12px 20px;
-            margin: 6px;
-            font-size: 16px;
+            padding: 15px 30px;
+            margin: 10px;
+            font-size: 18px;
             font-weight: bold;
             border-radius: 8px;
             cursor: pointer;
-            width: 220px;
+            width: 200px;
         }
         .diff-btn:hover { background: #ff9800; color: black; }
 
@@ -316,13 +316,12 @@
 
     <div id="difficultyModal" class="hidden">
         <div class="box" style="text-align: center;">
-            <h2>플레이 방식을 선택하세요</h2>
-            <p style="color: #ff9800; margin: 5px 0 15px 0; font-size: 14px;">[웨이브 모드]: 무한 웨이브, 웨이브 1-1, 2-1 등 시작 시 체력 완전 회복!</p>
-            <button class="diff-btn" data-mode="wave" data-diff="normal">🌊 웨이브 모드 (무한)</button><hr style="border-color: #555; margin: 10px 0;">
-            <button class="diff-btn" data-mode="normal" data-diff="easy">일반 - 쉬움</button><br>
-            <button class="diff-btn" data-mode="normal" data-diff="normal">일반 - 보통</button><br>
-            <button class="diff-btn" data-mode="normal" data-diff="hard">일반 - 어려움</button><br>
-            <button class="diff-btn" data-mode="normal" data-diff="sandbag">일반 - 샌드백</button><br>
+            <h2>봇 난이도를 선택하세요</h2>
+            <button class="diff-btn" data-diff="easy">쉬움</button><br>
+            <button class="diff-btn" data-diff="normal">보통</button><br>
+            <button class="diff-btn" data-diff="hard">어려움</button><br>
+            <button class="diff-btn" data-diff="sandbag">샌드백</button><br>
+            <button class="diff-btn" data-diff="wave" style="background: #d63031; border-color: #ff7675;">웨이브 모드 (무한)</button><br>
             <button id="closeDiffModal" style="background: #666; color: white; border: none; margin-top: 15px; padding: 8px 15px; border-radius: 5px; cursor: pointer;">취소</button>
         </div>
     </div>
@@ -410,7 +409,6 @@
 
     <div id="resultScreen" class="hidden">
         <h1 id="resultTitle">WIN</h1>
-        <p id="resultSubInfo" style="font-size: 20px; color: #ff9800; margin-bottom: 20px;"></p>
         <button id="backToLobbyBtn" style="font-size: 20px; padding: 15px 30px; background: #fff; border: none; border-radius: 5px; font-weight: bold;">메인 화면으로 돌아가기</button>
     </div>
 
@@ -435,7 +433,6 @@
         const gameRoom = document.getElementById('gameRoom');
         const resultScreen = document.getElementById('resultScreen');
         const resultTitle = document.getElementById('resultTitle');
-        const resultSubInfo = document.getElementById('resultSubInfo');
         const backToLobbyBtn = document.getElementById('backToLobbyBtn');
 
         const roomInput = document.getElementById('roomInput');
@@ -650,10 +647,9 @@
         diffButtons.forEach(btn => {
             btn.addEventListener('click', () => {
                 const diff = btn.getAttribute('data-diff');
-                const mode = btn.getAttribute('data-mode') || 'normal';
                 difficultyModal.classList.add('hidden');
                 lobby.classList.add('hidden');
-                socket.emit('start-single-play', { difficulty: diff, mode: mode });
+                socket.emit('start-single-play', diff);
             });
         });
 
@@ -807,11 +803,11 @@
             ctx.stroke();
 
             // 웨이브 모드일 경우 상단에 웨이브 표시
-            if (state.isWaveMode) {
+            if (state.waveInfo) {
                 ctx.fillStyle = '#ffeb3b';
                 ctx.font = 'bold 20px Arial';
                 ctx.textAlign = 'center';
-                ctx.fillText(`WAVE ${state.waveMain}-${state.waveSub}`, canvas.width / 2, 30);
+                ctx.fillText(`WAVE ${state.waveInfo}`, canvas.width / 2, 30);
                 ctx.textAlign = 'left';
             }
 
@@ -896,8 +892,8 @@
 
                     ctx.fillStyle = '#fff';
                     ctx.font = '14px Arial';
-                    const displayName = id === 'bot' ? `[BOT] ${p.char}` : p.char;
-                    ctx.fillText(`${displayName} (HP: ${Math.round(p.hp)}/${Math.round(p.maxHp)})`, p.x - 10, p.y - 15);
+                    const displayName = (id.startsWith('bot') || id === 'bot') ? `[BOT] ${p.char}` : p.char;
+                    ctx.fillText(`${displayName} (HP: ${Math.round(p.hp)}/${p.maxHp})`, p.x - 10, p.y - 15);
 
                     if (p.dialogue && p.dialogueTimer > 0) {
                         ctx.fillStyle = '#ffeb3b';
@@ -933,18 +929,15 @@
             if (isSpectating) {
                 resultTitle.innerText = '게임 종료';
                 resultTitle.className = '';
-                resultSubInfo.innerText = '';
                 return;
             }
 
             if (data.winner === socket.id) {
                 resultTitle.innerText = 'WIN';
                 resultTitle.className = 'win-text';
-                resultSubInfo.innerText = data.waveInfo ? `도달한 웨이브: ${data.waveInfo}` : '';
             } else {
                 resultTitle.innerText = 'FAIL';
                 resultTitle.className = 'fail-text';
-                resultSubInfo.innerText = data.waveInfo ? `도달한 웨이브: ${data.waveInfo}` : '';
             }
         });
 
