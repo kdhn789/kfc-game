@@ -17,30 +17,30 @@ module.exports = {
             p.dialogueTimer = 40;
 
             const dir = p.facing === 'right' ? 1 : -1;
-            const laserWidth = 150; // 끝까지 가는 레이저 길이
+            const laserWidth = 150; 
             const laserHeight = 25;
 
-            // Q스킬 시전 시 위로 90도 회전/발사 연출을 위한 플래그 및 각도 설정
+            // Q스킬 시전 시 위로 회전/발사 연출 플래그 및 각도 설정
             p.isQBeamAttacking = true;
-            p.beamAngle = 0; // 정면 시작
+            p.beamAngle = 0; 
 
-            // 위로 90도까지 움직이며 한번 쏘는 로직
+            // 위로 90도까지 더 빠르고 민첩하게 움직이도록 주기 단축 (10ms 간격, 총 6단계)
             let currentAngleStep = 0;
-            const maxSteps = 10;
+            const maxSteps = 6;
             const intervalId = setInterval(() => {
                 currentAngleStep++;
-                p.beamAngle = -(Math.PI / 2) * (currentAngleStep / maxSteps); // 위로 90도(-90도) 회전
+                p.beamAngle = -(Math.PI / 2) * (currentAngleStep / maxSteps); 
 
                 if (currentAngleStep >= maxSteps) {
                     clearInterval(intervalId);
                     setTimeout(() => {
                         p.isQBeamAttacking = false;
                         p.beamAngle = 0;
-                    }, 200);
+                    }, 100);
                 }
-            }, 20);
+            }, 10);
 
-            // 판정 박스 생성 (직선으로 끝까지)
+            // 판정 박스 생성
             const attackBox = {
                 x: dir === 1 ? p.x + p.width : p.x - laserWidth,
                 y: p.y - 20,
@@ -87,9 +87,8 @@ module.exports = {
             p.dialogue = "넣을게~~~";
             p.dialogueTimer = 60;
 
-            // 근처 상대방 찾기
             let targetEnemy = null;
-            let minDistance = 150; // 근처 판정 거리
+            let minDistance = 150;
 
             for (let id in room.players) {
                 if (id !== socketId) {
@@ -105,29 +104,32 @@ module.exports = {
             }
 
             if (targetEnemy) {
-                // 상대방 뒤에 3초간 밀착하여 진동하면서 연속 딜
                 const attachDuration = 2000;
-                const tickInterval = 100; // 0.3초마다 딜
+                const tickInterval = 100; 
                 let elapsed = 0;
 
                 p.isAttached = true;
 
                 const attachTimer = setInterval(() => {
                     elapsed += tickInterval;
-                    if (elapsed >= attachDuration || targetEnemy.isDead || p.isDead) {
+
+                    // 중간에 점프를 시도하거나(vy < 0 또는 공중 상태 전환 등) 사망 시 즉시 취소
+                    if (p.vy < 0 || elapsed >= attachDuration || targetEnemy.isDead || p.isDead) {
                         clearInterval(attachTimer);
                         p.isAttached = false;
+                        if (p.vy < 0) {
+                            p.dialogue = "취소!";
+                            p.dialogueTimer = 25;
+                        }
                         return;
                     }
 
-                    // 상대방 뒤로 위치 고정 및 진동 효과
                     const offsetDir = targetEnemy.facing === 'right' ? -20 : 40;
                     p.x = targetEnemy.x + offsetDir + (Math.random() * 6 - 3);
                     p.y = targetEnemy.y + (Math.random() * 6 - 3);
                     p.vx = 0;
                     p.vy = 0;
 
-                    // 연속 딜 적용
                     if (!(room.isSingle && room.botDifficulty === 'sandbag')) {
                         targetEnemy.hp -= 2;
                         if (targetEnemy.hp < 0) targetEnemy.hp = 0;
