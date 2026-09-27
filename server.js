@@ -43,9 +43,7 @@ function broadcastRoomList() {
     io.emit('room-list-update', roomListInfo);
 }
 
-// 웨이브에 따른 봇 생성 헬퍼 함수
 function spawnBotsForWave(room, waveMain) {
-    // 기존 봇 제거
     for (let id in room.players) {
         if (id.startsWith('bot_')) {
             delete room.players[id];
@@ -115,8 +113,8 @@ io.on('connection', (socket) => {
             isSingle: true,
             botDifficulty: difficulty || 'normal',
             isWaveMode: (difficulty === 'wave'),
-            waveSub: 1, // 1-1, 1-2, 1-3 중 소블록
-            waveMain: 1 // 웨이브 앞자리 (1-1이면 1)
+            waveSub: 1,
+            waveMain: 1
         };
 
         socket.join(roomCode);
@@ -334,7 +332,7 @@ io.on('connection', (socket) => {
         if (!rooms[roomCode] || rooms[roomCode].status !== 'playing') return;
         if (socket.isSpectator) return;
         const p = rooms[roomCode].players[socket.id];
-        if (!p || p.isDead) return;
+        if (!p || p.isDead || p.isAttached) return;
 
         if (keys.left) { p.vx = -p.speed; p.facing = 'left'; }
         else if (keys.right) { p.vx = p.speed; p.facing = 'right'; }
@@ -488,7 +486,6 @@ function startGameLoop(roomCode) {
                 const playerSocketId = Object.keys(room.players).find(id => !id.startsWith('bot'));
                 const player = room.players[playerSocketId];
 
-                // 웨이브 모드 체크: 모든 봇이 죽었는지 확인
                 if (room.isWaveMode) {
                     let allBotsDead = true;
                     for (let id in room.players) {
@@ -501,14 +498,12 @@ function startGameLoop(roomCode) {
                     }
 
                     if (allBotsDead) {
-                        // 다음 웨이브로 진행
                         room.waveSub++;
                         if (room.waveSub > 3) {
                             room.waveMain++;
                             room.waveSub = 1;
                         }
 
-                        // 앞자리(1-1, 2-1 등)가 바뀔 때 플레이어 피 무한 회복
                         if (room.waveSub === 1 && player) {
                             player.hp = player.maxHp;
                             room.floatingTexts.push({
@@ -532,7 +527,6 @@ function startGameLoop(roomCode) {
                     }
                 }
 
-                // 봇 AI 이동 처리
                 for (let id in room.players) {
                     if (id.startsWith('bot') || id === 'bot') {
                         const bot = room.players[id];
@@ -606,15 +600,17 @@ function startGameLoop(roomCode) {
                     }
                 }
 
-                p.vy += 0.6;
-                p.x += p.vx;
-                p.y += p.vy;
+                if (!p.isAttached) {
+                    p.vy += 0.6;
+                    p.x += p.vx;
+                    p.y += p.vy;
 
-                const floorY = 340 - p.height;
-                if (p.y >= floorY) { p.y = floorY; p.vy = 0; }
+                    const floorY = 340 - p.height;
+                    if (p.y >= floorY) { p.y = floorY; p.vy = 0; }
 
-                if (p.x < 0) p.x = 0;
-                if (p.x > 800 - p.width) p.x = 800 - p.width;
+                    if (p.x < 0) p.x = 0;
+                    if (p.x > 800 - p.width) p.x = 800 - p.width;
+                }
             }
 
             for (let id in room.players) {
@@ -622,7 +618,6 @@ function startGameLoop(roomCode) {
                 if (!p.isDead && p.hp <= 0) {
                     p.hp = 0;
                     p.isDead = true;
-                    // 싱글/웨이브 모드에서 플레이어가 죽었을 때만 게임 종료
                     if (room.isSingle) {
                         const playerSocketId = Object.keys(room.players).find(k => !k.startsWith('bot'));
                         if (id === playerSocketId) {
@@ -651,14 +646,13 @@ function startGameLoop(roomCode) {
                 }
             }
 
-            // 캐릭터들끼리 몸 겹침 및 밟기 방지 (찐따플레이 룰)
             const playerIds = Object.keys(room.players);
             for (let i = 0; i < playerIds.length; i++) {
                 for (let j = i + 1; j < playerIds.length; j++) {
                     const p1 = room.players[playerIds[i]];
                     const p2 = room.players[playerIds[j]];
 
-                    if (!p1.isDead && !p2.isDead) {
+                    if (!p1.isDead && !p2.isDead && !p1.isAttached && !p2.isAttached) {
                         if (p1.x < p2.x + p2.width && p1.x + p1.width > p2.x &&
                             p1.y < p2.y + p2.height && p1.y + p1.height > p2.y) {
                             

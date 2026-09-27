@@ -364,6 +364,10 @@
                 <h3>노관휘</h3>
                 <p>Q: 드럼통 | Shift: 너고아니?</p>
             </div>
+            <div class="char-card" data-char="이희재">
+                <h3>이희재</h3>
+                <p>Q: 꼭지빔 | Shift: 넣을게~~</p>
+            </div>
         </div>
 
         <div id="skillInfoTab">
@@ -423,7 +427,8 @@
             '강재승': { qDesc: '오른쪽 딸근의 지배자 - 데미지 25, 상대를 멀리 밀침(쿨타임 2초)', rDesc: '불꽃 - 뜨거운 불꽃을 뿜어내어 포물선 발사 (쿨타임 3.5초)', hp: 170, meleeDamage: 12, speed: 4.5, jumpPower: 11 },
             '박준모': { qDesc: '담배빵 - 근접 공격, 0.5초 정지 및 데미지 8(쿨타임 2.5초)', rDesc: '도넛 - 원거리 구멍 뚫린 도넛 모양 구체 3개 발사, 맞으면 밀려남 (쿨타임 3초)', hp: 170, meleeDamage: 10, speed: 10, jumpPower: 13 },
             '강율': { qDesc: '의사 호출 - 청록색 십자가와 체력 20 회복 (쿨타임 4초)', rDesc: '폐 터뜨리기 - 빨간색 파티클을 흘리며 앞으로 대쉬', hp: 100, meleeDamage: 14, speed: 14, jumpPower: 13 },
-            '노관휘': { qDesc: '드럼통 - 파란 드럼통에 상대를 가두어 2.523초간 이동 및 공격 불가 (쿨타임 3초)', rDesc: '너고아니? - 상대방을 맵 맨 끝으로 밀어내 고아 시킴 (쿨타임 2초)', hp: 152.3, meleeDamage: 7, speed: 6, jumpPower: 9 }
+            '노관휘': { qDesc: '드럼통 - 파란 드럼통에 상대를 가두어 2.523초간 이동 및 공격 불가 (쿨타임 3초)', rDesc: '너고아니? - 상대방을 맵 맨 끝으로 밀어내 고아 시킴 (쿨타임 2초)', hp: 152.3, meleeDamage: 7, speed: 6, jumpPower: 9 },
+            '이희재': { qDesc: '꼭지빔 - 앞으로 일직선 레이저를 쏘고 위로 90도 회전하며 발사 (쿨타임 2초)', rDesc: '넣을게~~ - 근처 상대방 뒤에 3초간 밀착하여 진동하며 연속 딜 (쿨타임 4초)', hp: 160, meleeDamage: 12, speed: 7, jumpPower: 11 }
         };
 
         const lobby = document.getElementById('lobby');
@@ -471,6 +476,7 @@
             '박준모': new Image(),
             '강율': new Image(),
             '노관휘': new Image(),
+            '이희재': new Image()
         };
         charImages['김도현'].src = './images/kimdohyun.png';
         charImages['김도현_각성'].src = './images/kimdohyun_awakened.png';
@@ -480,6 +486,7 @@
         charImages['박준모'].src = './images/parkjunmo.png';
         charImages['강율'].src = './images/kangyul.png';
         charImages['노관휘'].src = './images/nohgwanhwi.png';
+        charImages['이희재'].src = './images/leeheejae.png';
 
         let currentRoom = '';
         let selectedCharacter = null;
@@ -802,7 +809,6 @@
             ctx.lineTo(800, 340);
             ctx.stroke();
 
-            // 웨이브 모드일 경우 상단에 웨이브 표시
             if (state.waveInfo) {
                 ctx.fillStyle = '#ffeb3b';
                 ctx.font = 'bold 20px Arial';
@@ -862,6 +868,14 @@
                         ctx.fillRect(p.x, p.y, p.width, p.height);
                     }
 
+                    // 패시브: 사각형 몸의 앞부분 중간쯤에 작은 사각형(젖꼭지 형태) 추가
+                    if (p.char === '이희재') {
+                        ctx.fillStyle = '#ff7675';
+                        const nippleX = p.facing === 'right' ? p.x + p.width - 10 : p.x + 6;
+                        const nippleY = p.y + (p.height / 2) - 3;
+                        ctx.fillRect(nippleX, nippleY, 6, 6);
+                    }
+
                     if (id === socket.id && !isSpectating) {
                         ctx.strokeStyle = '#2ecc71';
                     } else {
@@ -876,10 +890,15 @@
                         ctx.fillRect(punchX, p.y + (p.height / 2) - 15, 30, 30);
                     }
 
-                    if (p.isQAttacking) {
-                        ctx.fillStyle = 'rgba(255, 235, 59, 0.5)';
-                        const qBoxX = p.facing === 'right' ? p.x + p.width : p.x - 70;
-                        ctx.fillRect(qBoxX, p.y - 10, 70, p.height + 20);
+                    // 이희재 Q스킬 꼭지빔 레이저 렌더링 (위로 90도 회전 연출 포함)
+                    if (p.isQBeamAttacking) {
+                        ctx.save();
+                        ctx.translate(p.facing === 'right' ? p.x + p.width : p.x, p.y + p.height / 2);
+                        ctx.rotate(p.beamAngle || 0);
+                        ctx.fillStyle = 'rgba(255, 107, 129, 0.8)';
+                        const laserLen = p.facing === 'right' ? 800 : -800;
+                        ctx.fillRect(0, -10, laserLen, 20);
+                        ctx.restore();
                     }
 
                     if (p.isDrumTrapped) {
