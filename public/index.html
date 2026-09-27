@@ -868,10 +868,10 @@
                         ctx.fillRect(p.x, p.y, p.width, p.height);
                     }
 
-                    // 패시브: 사각형 몸의 앞부분 중간쯤에 작은 사각형(젖꼭지 형태) 추가
+                    // 패시브: 사각형 몸 바깥쪽으로 살짝 튀어나오도록 젖꼭지 형태 추가
                     if (p.char === '이희재') {
                         ctx.fillStyle = '#ff7675';
-                        const nippleX = p.facing === 'right' ? p.x + p.width - 10 : p.x + 6;
+                        const nippleX = p.facing === 'right' ? p.x + p.width - 2 : p.x - 4;
                         const nippleY = p.y + (p.height / 2) - 3;
                         ctx.fillRect(nippleX, nippleY, 6, 6);
                     }
@@ -890,21 +890,21 @@
                         ctx.fillRect(punchX, p.y + (p.height / 2) - 15, 30, 30);
                     }
 
-                    // 이희재 Q스킬 꼭지빔 레이저 렌더링 (위로 90도 회전 연출 포함)
+                    // 이희재 Q스킬 꼭지빔 레이저 렌더링 (두께를 6으로 가늘게 수정)
                     if (p.isQBeamAttacking) {
                         ctx.save();
                         ctx.translate(p.facing === 'right' ? p.x + p.width : p.x, p.y + p.height / 2);
                         ctx.rotate(p.beamAngle || 0);
-                        ctx.fillStyle = 'rgba(255, 107, 129, 0.8)';
+                        ctx.fillStyle = 'rgba(255, 107, 129, 0.9)';
                         const laserLen = p.facing === 'right' ? 800 : -800;
-                        ctx.fillRect(0, -10, laserLen, 20);
+                        ctx.fillRect(0, -3, laserLen, 6);
                         ctx.restore();
                     }
 
                     if (p.isDrumTrapped) {
                         ctx.fillStyle = 'rgba(0, 85, 255, 0.6)';
                         ctx.fillRect(p.x - 5, p.y - 5, p.width + 10, p.height + 10);
-                        ctx.strokeStyle = '#0055ff';
+                        ctx.strokeStyle = '#ff4757';
                         ctx.lineWidth = 3;
                         ctx.strokeRect(p.x - 5, p.y - 5, p.width + 10, p.height + 10);
                     }

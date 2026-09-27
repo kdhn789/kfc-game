@@ -69,7 +69,7 @@ module.exports = {
                             x: enemy.x + enemy.width / 2,
                             y: enemy.y,
                             text: "-22",
-                            color: '#d4ff53',
+                            color: '#ff4757',
                             life: 30
                         });
                     }
