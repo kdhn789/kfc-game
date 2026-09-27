@@ -77,7 +77,7 @@ module.exports = {
 
     onRSkill: (p, room, socketId) => {
         const now = Date.now();
-        const cooldown = 4000;
+        const cooldown = 3500;
 
         if (!p.lastRSkillTime || now - p.lastRSkillTime >= cooldown) {
             p.lastRSkillTime = now;
@@ -101,7 +101,7 @@ module.exports = {
             }
 
             if (targetEnemy) {
-                const attachDuration = 2000;
+                const attachDuration = 1500;
                 const tickInterval = 100; 
                 let elapsed = 0;
 
@@ -119,7 +119,7 @@ module.exports = {
                         if (p.isJumpRequested) {
                             p.vy = p.jumpPower * 1.3; // 취소하면서 평소보다 높게 뜀 (30% 강화)
                             p.isJumpRequested = false;
-                            p.dialogue = "취소!";
+                            p.dialogue = "ㅈㅈ야";
                             p.dialogueTimer = 25;
                         }
                         return;
@@ -147,7 +147,7 @@ module.exports = {
                     room.screenShake = 4;
                 }, tickInterval);
             } else {
-                p.dialogue = "근처에 사람이 없노!";
+                p.dialogue = "근처에 사람이 없노ㅠㅠ";
                 p.dialogueTimer = 40;
             }
         }
