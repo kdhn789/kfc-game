@@ -901,6 +901,16 @@
                         ctx.restore();
                     }
 
+                    // 점프 키(예: 화살표 위쪽 또는 스페이스바 등) 입력 시점
+                    if (keys['ArrowUp'] || keys['KeyW'] || keys['Space']) {
+                        if (player.isAttached) {
+                            player.isJumpRequested = true; // R스킬 부착 중 점프 시 취소 및 높이 뛰기 트리거
+                        } else if (player.onGround) {
+                            player.vy = player.jumpPower;
+                            player.onGround = false;
+                        }
+                    }
+
                     if (p.isDrumTrapped) {
                         ctx.fillStyle = 'rgba(0, 85, 255, 0.6)';
                         ctx.fillRect(p.x - 5, p.y - 5, p.width + 10, p.height + 10);

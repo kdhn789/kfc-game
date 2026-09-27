@@ -9,7 +9,7 @@ module.exports = {
 
     onQSkill: (p, room, socketId) => {
         const now = Date.now();
-        const cooldown = 2000; // 쿨타임 2초
+        const cooldown = 2000; 
 
         if (!p.lastQSkillTime || now - p.lastQSkillTime >= cooldown) {
             p.lastQSkillTime = now;
@@ -20,11 +20,9 @@ module.exports = {
             const laserWidth = 150; 
             const laserHeight = 25;
 
-            // Q스킬 시전 시 위로 회전/발사 연출 플래그 및 각도 설정
             p.isQBeamAttacking = true;
             p.beamAngle = 0; 
 
-            // 위로 90도까지 더 빠르고 민첩하게 움직이도록 주기 단축 (10ms 간격, 총 6단계)
             let currentAngleStep = 0;
             const maxSteps = 6;
             const intervalId = setInterval(() => {
@@ -40,7 +38,6 @@ module.exports = {
                 }
             }, 10);
 
-            // 판정 박스 생성
             const attackBox = {
                 x: dir === 1 ? p.x + p.width : p.x - laserWidth,
                 y: p.y - 20,
@@ -113,11 +110,15 @@ module.exports = {
                 const attachTimer = setInterval(() => {
                     elapsed += tickInterval;
 
-                    // 중간에 점프를 시도하거나(vy < 0 또는 공중 상태 전환 등) 사망 시 즉시 취소
-                    if (p.vy < 0 || elapsed >= attachDuration || targetEnemy.isDead || p.isDead) {
+                    // 만약 부착 중 플레이어가 점프 키를 눌렀다면(외부 루프나 입력에서 점프 감지 혹은 아래와 같이 점프 상태 전환 시)
+                    // 여기서는 플레이어가 점프를 시도해 vy가 위쪽으로 향하거나(또는 점프 플래그 발생 시) 취소 처리
+                    if (p.isJumpRequested || elapsed >= attachDuration || targetEnemy.isDead || p.isDead) {
                         clearInterval(attachTimer);
                         p.isAttached = false;
-                        if (p.vy < 0) {
+                        
+                        if (p.isJumpRequested) {
+                            p.vy = p.jumpPower * 1.3; // 취소하면서 평소보다 높게 뜀 (30% 강화)
+                            p.isJumpRequested = false;
                             p.dialogue = "취소!";
                             p.dialogueTimer = 25;
                         }
