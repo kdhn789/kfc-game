@@ -17,7 +17,7 @@ module.exports = {
             p.dialogueTimer = 40;
 
             const dir = p.facing === 'right' ? 1 : -1;
-            const laserWidth = 800; // 끝까지 가는 레이저 길이
+            const laserWidth = 400; // 끝까지 가는 레이저 길이
             const laserHeight = 25;
 
             // Q스킬 시전 시 위로 90도 회전/발사 연출을 위한 플래그 및 각도 설정
@@ -106,8 +106,8 @@ module.exports = {
 
             if (targetEnemy) {
                 // 상대방 뒤에 3초간 밀착하여 진동하면서 연속 딜
-                const attachDuration = 3000;
-                const tickInterval = 300; // 0.3초마다 딜
+                const attachDuration = 2000;
+                const tickInterval = 100; // 0.3초마다 딜
                 let elapsed = 0;
 
                 p.isAttached = true;
@@ -121,7 +121,7 @@ module.exports = {
                     }
 
                     // 상대방 뒤로 위치 고정 및 진동 효과
-                    const offsetDir = targetEnemy.facing === 'right' ? -40 : 40;
+                    const offsetDir = targetEnemy.facing === 'right' ? -20 : 40;
                     p.x = targetEnemy.x + offsetDir + (Math.random() * 6 - 3);
                     p.y = targetEnemy.y + (Math.random() * 6 - 3);
                     p.vx = 0;
