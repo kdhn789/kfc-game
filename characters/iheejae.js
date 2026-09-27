@@ -3,7 +3,7 @@ module.exports = {
     hp: 160,
     speed: 7,
     jumpPower: -11,
-    meleeDamage: 12,
+    meleeDamage: 10,
     image: './images/leeheejae.png',
     scale: 1.0,
 
@@ -17,7 +17,7 @@ module.exports = {
             p.dialogueTimer = 40;
 
             const dir = p.facing === 'right' ? 1 : -1;
-            const laserWidth = 400; // 끝까지 가는 레이저 길이
+            const laserWidth = 150; // 끝까지 가는 레이저 길이
             const laserHeight = 25;
 
             // Q스킬 시전 시 위로 90도 회전/발사 연출을 위한 플래그 및 각도 설정
@@ -69,7 +69,7 @@ module.exports = {
                             x: enemy.x + enemy.width / 2,
                             y: enemy.y,
                             text: "-22",
-                            color: '#ff4757',
+                            color: '#d4ff53',
                             life: 30
                         });
                     }
@@ -129,14 +129,14 @@ module.exports = {
 
                     // 연속 딜 적용
                     if (!(room.isSingle && room.botDifficulty === 'sandbag')) {
-                        targetEnemy.hp -= 4;
+                        targetEnemy.hp -= 2;
                         if (targetEnemy.hp < 0) targetEnemy.hp = 0;
                     }
 
                     room.floatingTexts.push({
                         x: targetEnemy.x + targetEnemy.width / 2,
                         y: targetEnemy.y,
-                        text: "-4",
+                        text: "-2",
                         color: '#ff4757',
                         life: 20
                     });
@@ -144,7 +144,7 @@ module.exports = {
                     room.screenShake = 4;
                 }, tickInterval);
             } else {
-                p.dialogue = "근처에 사람이 없어!";
+                p.dialogue = "근처에 사람이 없노!";
                 p.dialogueTimer = 40;
             }
         }
