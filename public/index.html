@@ -200,6 +200,7 @@
         }
 
         .action-btn {
+            position: relative;
             background: rgba(255, 255, 255, 0.2);
             color: white;
             border: 3px solid #fff;
@@ -210,9 +211,25 @@
             align-items: center;
             justify-content: center;
             touch-action: none;
+            overflow: hidden;
         }
         .action-btn:active { background: rgba(255, 255, 255, 0.5); }
         #btn-r { background: rgba(244, 67, 54, 0.4); border-color: #f44336; font-size: 16px; }
+
+        /* 쿨타임 중일 때 스타일 클래스 */
+        .action-btn.cooldown {
+            background: rgba(0, 0, 0, 0.6) !important;
+            border-color: #777 !important;
+            color: #aaa;
+        }
+        .cooldown-text {
+            position: absolute;
+            font-size: 18px;
+            font-weight: bold;
+            color: #ffeb3b;
+            text-shadow: 1px 1px 2px #000;
+            pointer-events: none;
+        }
 
         #resultScreen {
             position: fixed;
@@ -501,6 +518,10 @@
         let gameInterval = null;
         let isSpectating = false;
 
+        // 스킬별 마지막 사용 시간 및 쿨타임 정의 (밀리초 단위)
+        let lastSkillTimes = { e: 0, q: 0, r: 0 };
+        const skillCooldowns = { e: 1000, q: 2000, r: 3000 }; // 기본값 (캐릭터별 개별 설정을 맞추거나 범용 적용 가능)
+
         const mobileControls = document.getElementById('mobileControls');
         const touchSettingsBtn = document.getElementById('touchSettingsBtn');
         let isCustomizing = false;
@@ -579,14 +600,30 @@
 
         window.addEventListener('keydown', (e) => {
             if (gameRoom.classList.contains('hidden') || isSpectating) return;
+            const now = Date.now();
+
             if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
             if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
             if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') keys.jump = true;
-            if (e.code === 'KeyE') keys.skill = true;
-            if (e.code === 'KeyQ') keys.qSkill = true;
+            
+            if (e.code === 'KeyE') {
+                if (now - lastSkillTimes.e >= skillCooldowns.e) {
+                    keys.skill = true;
+                    lastSkillTimes.e = now;
+                }
+            }
+            if (e.code === 'KeyQ') {
+                if (now - lastSkillTimes.q >= skillCooldowns.q) {
+                    keys.qSkill = true;
+                    lastSkillTimes.q = now;
+                }
+            }
             if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
                 e.preventDefault();
-                keys.rSkill = true;
+                if (now - lastSkillTimes.r >= skillCooldowns.r) {
+                    keys.rSkill = true;
+                    lastSkillTimes.r = now;
+                }
             }
         });
 
@@ -600,36 +637,78 @@
             if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') keys.rSkill = false;
         });
 
-        function bindTouchButton(id, keyName, isHold = true) {
+        function bindTouchButton(id, keyName, skillKeyType = null) {
             const btn = document.getElementById(id);
             if (!btn) return;
 
-            btn.addEventListener('touchstart', (e) => {
+            const triggerAction = (e) => {
                 if (isCustomizing || isSpectating) return;
                 e.preventDefault();
+                const now = Date.now();
+                if (skillKeyType && lastSkillTimes[skillKeyType]) {
+                    if (now - lastSkillTimes[skillKeyType] < skillCooldowns[skillKeyType]) return;
+                    lastSkillTimes[skillKeyType] = now;
+                }
                 keys[keyName] = true;
-            });
-            btn.addEventListener('touchend', (e) => {
+            };
+
+            const releaseAction = (e) => {
                 if (isCustomizing || isSpectating) return;
                 e.preventDefault();
-                if (isHold) keys[keyName] = false;
-            });
-            btn.addEventListener('mousedown', (e) => {
-                if (isCustomizing || isSpectating) return;
-                keys[keyName] = true;
-            });
-            btn.addEventListener('mouseup', (e) => {
-                if (isCustomizing || isSpectating) return;
-                if (isHold) keys[keyName] = false;
-            });
+                if (keyName !== 'e' && keyName !== 'qSkill' && keyName !== 'rSkill') {
+                    keys[keyName] = false;
+                }
+            };
+
+            btn.addEventListener('touchstart', triggerAction);
+            btn.addEventListener('touchend', releaseAction);
+            btn.addEventListener('mousedown', triggerAction);
+            btn.addEventListener('mouseup', releaseAction);
         }
 
-        bindTouchButton('btn-left', 'left', true);
-        bindTouchButton('btn-right', 'right', true);
-        bindTouchButton('btn-jump', 'jump', true);
-        bindTouchButton('btn-e', 'skill', false);
-        bindTouchButton('btn-q', 'qSkill', false);
-        bindTouchButton('btn-r', 'rSkill', false);
+        bindTouchButton('btn-left', 'left');
+        bindTouchButton('btn-right', 'right');
+        bindTouchButton('btn-jump', 'jump');
+        bindTouchButton('btn-e', 'skill', 'e');
+        bindTouchButton('btn-q', 'qSkill', 'q');
+        bindTouchButton('btn-r', 'rSkill', 'r');
+
+        // UI 쿨타임 표시 업데이트 루프 (매 프레임 버튼 상태 갱신)
+        function updateCooldownUI() {
+            if (!gameRoom.classList.contains('hidden') && !isSpectating) {
+                const now = Date.now();
+                
+                ['e', 'q', 'r'].forEach(sType => {
+                    const btnId = sType === 'e' ? 'btn-e' : (sType === 'q' ? 'btn-q' : 'btn-r');
+                    const btn = document.getElementById(btnId);
+                    if (!btn) return;
+
+                    const elapsed = now - lastSkillTimes[sType];
+                    const cool = skillCooldowns[sType];
+
+                    let cdTextEl = btn.querySelector('.cooldown-text');
+
+                    if (elapsed < cool) {
+                        const remaining = ((cool - elapsed) / 1000).toFixed(1);
+                        btn.classList.add('cooldown');
+                        
+                        if (!cdTextEl) {
+                            cdTextEl = document.createElement('span');
+                            cdTextEl.className = 'cooldown-text';
+                            btn.appendChild(cdTextEl);
+                        }
+                        cdTextEl.innerText = remaining;
+                    } else {
+                        btn.classList.remove('cooldown');
+                        if (cdTextEl) {
+                            cdTextEl.remove();
+                        }
+                    }
+                });
+            }
+            requestAnimationFrame(updateCooldownUI);
+        }
+        requestAnimationFrame(updateCooldownUI);
 
         function enterRoom() {
             const roomCode = roomInput.value;
@@ -883,7 +962,6 @@
                         ctx.fillRect(nippleX, nippleY, 6, 6);
                     }
 
-                    // 권범서 쉬프트 사용 시 더 커진 원 사이즈 엉덩이 시각 표현 추가
                     if (p.char === '권범서' && p.isAttacking) {
                         ctx.fillStyle = '#ff9800';
                         const hipX = p.facing === 'right' ? p.x - 22 : p.x + p.width + 6;
