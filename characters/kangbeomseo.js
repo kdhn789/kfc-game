@@ -16,6 +16,9 @@ module.exports = {
             p.dialogue = "ㅗㅗ";
             p.dialogueTimer = 50;
 
+            // Q 스킬 사용 시 화면 진동 효과 부여
+            room.screenShake = 12;
+
             let targetEnemy = null;
             let minDistance = 150; // 근처 범위
 
@@ -33,18 +36,19 @@ module.exports = {
             }
 
             if (targetEnemy) {
-                targetEnemy.dialogue = "나 너무 힘들어ㅜㅜ";
-                targetEnemy.dialogueTimer = 50;
+                // 눈물 두 방울 흘리는 대사 및 시각 표현
+                targetEnemy.dialogue = "나 너무 힘들어ㅜㅜ 💧💧";
+                targetEnemy.dialogueTimer = 60;
 
                 const originalSpeed = targetEnemy.speed;
                 targetEnemy.speed = originalSpeed * 0.5; // 이동속도 절반 감소
 
                 room.floatingTexts.push({
                     x: targetEnemy.x + targetEnemy.width / 2,
-                    y: targetEnemy.y,
-                    text: "이동속도 -50%",
-                    color: '#4673f0',
-                    life: 40
+                    y: targetEnemy.y - 10,
+                    text: "💧💧 눈물 뚝뚝",
+                    color: '#00bcd4',
+                    life: 45
                 });
 
                 setTimeout(() => {
@@ -65,30 +69,46 @@ module.exports = {
             p.dialogue = "범덩이!!!";
             p.dialogueTimer = 60;
             p.isAttacking = true;
-            setTimeout(() => { p.isAttacking = false; }, 300);
+            setTimeout(() => { p.isAttacking = false; }, 350);
 
-            // 원 두개로 엉덩이 모양을 표현하는 파티클/시각 효과 생성
+            // 상대쪽을 바라보며 엉덩이를 보이게 점프 (vy 음수값으로 위로 점프하면서 반대 방향으로 몸 돌리기)
+            p.vy = -9;
+            let targetEnemy = null;
+            for (let id in room.players) {
+                if (id !== socketId) {
+                    targetEnemy = room.players[id];
+                    break;
+                }
+            }
+
+            if (targetEnemy) {
+                // 상대가 있는 방향의 반대쪽을 바라보게 해 엉덩이를 들이밀도록 설정
+                p.facing = targetEnemy.x > p.x ? 'left' : 'right';
+            }
+
+            // 원 사이즈로 더 크게 확장된 엉덩이 모양 파티클 생성
             if (room.particles) {
-                const startX = p.facing === 'right' ? p.x + p.width : p.x;
+                const startX = p.facing === 'right' ? p.x - 10 : p.x + p.width + 10;
                 const startY = p.y + p.height / 2;
-                for (let i = 0; i < 20; i++) {
+                for (let i = 0; i < 30; i++) {
                     room.particles.push({
-                        x: startX + (Math.random() - 0.5) * 30,
-                        y: startY + (Math.random() - 0.5) * 30,
-                        vx: (Math.random() - 0.5) * 4,
-                        vy: (Math.random() - 0.5) * 4,
+                        x: startX + (Math.random() - 0.5) * 45,
+                        y: startY + (Math.random() - 0.5) * 45,
+                        vx: (Math.random() - 0.5) * 6,
+                        vy: (Math.random() - 0.5) * 6,
                         color: '#ff9800',
                         type: 'particle',
-                        life: 25
+                        radius: 7,
+                        life: 30
                     });
                 }
             }
 
             const attackBox = {
-                x: p.facing === 'right' ? p.x + p.width : p.x - 60,
-                y: p.y,
-                width: 60,
-                height: p.height
+                x: p.facing === 'right' ? p.x - 40 : p.x,
+                y: p.y - 10,
+                width: p.width + 80,
+                height: p.height + 20
             };
 
             for (let id in room.players) {
@@ -102,57 +122,47 @@ module.exports = {
                         attackBox.y + enemy.height > enemy.y) {
                         
                         if (!(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
-                            enemy.hp -= 12;
+                            enemy.hp -= 15;
                             if (enemy.hp < 0) enemy.hp = 0;
                         }
 
-                        room.screenShake = 15;
+                        room.screenShake = 22;
                         room.floatingTexts.push({
                             x: enemy.x + enemy.width / 2,
                             y: enemy.y,
-                            text: "범덩이 피격!",
+                            text: "범덩이 명중!",
                             color: '#ff4757',
                             life: 40
                         });
 
-                        // 벽에 두 번 튕기는 넉백 로직 (좌우 벽 0 ~ 800 기준)
-                        const initialDir = p.facing === 'right' ? 1 : -1;
-                        let bounceCount = 0;
-                        let currentX = enemy.x + initialDir * 120;
+                        // 맞으면 무조건 벽에 튕길 정도로 멀리 날아가도록 넉백 거리 대폭 강화 (맵 끝인 0 또는 760으로 즉시 사출)
+                        const pushDir = p.facing === 'right' ? -1 : 1;
+                        let targetWallX = pushDir === -1 ? 10 : 750;
+                        enemy.x = targetWallX;
 
-                        // 첫 번째 위치 설정 및 벽 충돌 판정
-                        if (currentX <= 0) {
-                            currentX = 0;
-                            bounceCount++;
-                        } else if (currentX >= 800 - enemy.width) {
-                            currentX = 800 - enemy.width;
-                            bounceCount++;
-                        }
-                        enemy.x = currentX;
+                        room.floatingTexts.push({
+                            x: enemy.x + enemy.width / 2,
+                            y: enemy.y - 20,
+                            text: "벽꽝 직행!",
+                            color: '#ffeb3b',
+                            life: 35
+                        });
 
-                        // 두 번째 튕김 효과 (약간의 지연 후 반대 방향으로 이동)
+                        // 연이어 반대쪽 벽으로 한 번 더 강력하게 튕기는 효과 구현
                         setTimeout(() => {
                             if (enemy && !enemy.isDead) {
-                                const reboundDir = -initialDir;
-                                let secondX = enemy.x + reboundDir * 150;
-                                if (secondX <= 0) {
-                                    secondX = 0;
-                                    bounceCount++;
-                                } else if (secondX >= 800 - enemy.width) {
-                                    secondX = 800 - enemy.width;
-                                    bounceCount++;
-                                }
-                                enemy.x = secondX;
+                                const reboundWallX = pushDir === -1 ? 750 : 10;
+                                enemy.x = reboundWallX;
 
                                 room.floatingTexts.push({
                                     x: enemy.x + enemy.width / 2,
-                                    y: enemy.y,
-                                    text: `벽 튕김 (${bounceCount}회)!`,
-                                    color: '#ffeb3b',
-                                    life: 30
+                                    y: enemy.y - 20,
+                                    text: "더블 벽꽝!",
+                                    color: '#ff9800',
+                                    life: 35
                                 });
                             }
-                        }, 150);
+                        }, 180);
                     }
                 }
             }

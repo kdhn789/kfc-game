@@ -433,7 +433,7 @@
             '강율': { qDesc: '의사 호출 - 청록색 십자가와 체력 20 회복 (쿨타임 4초)', rDesc: '폐 터뜨리기 - 빨간색 파티클을 흘리며 앞으로 대쉬', hp: 100, meleeDamage: 14, speed: 14, jumpPower: 13 },
             '노관휘': { qDesc: '드럼통 - 파란 드럼통에 상대를 가두어 2.523초간 이동 및 공격 불가 (쿨타임 3초)', rDesc: '너고아니? - 상대방을 맵 맨 끝으로 밀어내 고아 시킴 (쿨타임 2초)', hp: 152.3, meleeDamage: 7, speed: 6, jumpPower: 9 },
             '이희재': { qDesc: '꼭지빔 - 앞으로 일직선 레이저를 쏘고 위로 90도 회전하며 발사 (쿨타임 2초)', rDesc: '넣을게~~ - 근처 상대방 뒤에 1.5초간 밀착하여 진동하며 연속 딜 (쿨타임 3.5초)', hp: 160, meleeDamage: 12, speed: 7, jumpPower: 11 },
-            '권범서': { qDesc: 'ㅗㅗ - 근처 상대 이동속도 2초간 절반 감소, 상대가 "나 너무 힘들어ㅜㅜ" 대사 및 권범서가 "ㅗㅗ" 대사 (쿨타임 3초)', rDesc: '범덩이 - 근접 돌진하여 엉덩이 모양 파티클 표현, 맞은 상대는 벽에 두 번 튕김 (쿨타임 3초)', hp: 150, meleeDamage: 10, speed: 6, jumpPower: 11 }
+            '권범서': { qDesc: 'ㅗㅗ - 근처 상대 이동속도 2초간 절반 감소, 상대가 "나 너무 힘들어ㅜㅜ" 대사 및 권범서가 "ㅗㅗ" 대사 (쿨타임 3초)', rDesc: '범덩이 - 상대쪽으로 엉덩이를 보이며 점프 후 원 사이즈 엉덩이 파티클, 맞은 상대는 벽에 무조건 튕김 (쿨타임 3초)', hp: 150, meleeDamage: 10, speed: 6, jumpPower: 11 }
         };
 
         const lobby = document.getElementById('lobby');
@@ -732,7 +732,6 @@
             charSelectRoom.classList.remove('hidden');
         });
 
-        // 갱신된 카드 목록 다시 바인딩
         const updatedCharCards = document.querySelectorAll('.char-card');
         updatedCharCards.forEach(card => {
             card.addEventListener('click', () => {
@@ -839,7 +838,7 @@
                     ctx.beginPath();
                     if (proj.type === 'particle') {
                         ctx.fillStyle = proj.color || '#fff';
-                        ctx.arc(proj.x, proj.y, 4, 0, Math.PI * 2);
+                        ctx.arc(proj.x, proj.y, proj.radius || 4, 0, Math.PI * 2);
                         ctx.fill();
                     } else if (proj.char === '박준모' || proj.type === 'donut' || proj.isDonutShape) {
                         ctx.strokeStyle = proj.color || '#ff9800';
@@ -884,13 +883,13 @@
                         ctx.fillRect(nippleX, nippleY, 6, 6);
                     }
 
-                    // 권범서 쉬프트 사용 시 몸 뒤쪽에 원 두 개로 엉덩이 모양 시각 표현 추가
+                    // 권범서 쉬프트 사용 시 더 커진 원 사이즈 엉덩이 시각 표현 추가
                     if (p.char === '권범서' && p.isAttacking) {
                         ctx.fillStyle = '#ff9800';
-                        const hipX = p.facing === 'right' ? p.x - 15 : p.x + p.width + 5;
+                        const hipX = p.facing === 'right' ? p.x - 22 : p.x + p.width + 6;
                         ctx.beginPath();
-                        ctx.arc(hipX, p.y + 15, 8, 0, Math.PI * 2);
-                        ctx.arc(hipX + (p.facing === 'right' ? 8 : -8), p.y + 25, 8, 0, Math.PI * 2);
+                        ctx.arc(hipX, p.y + 12, 14, 0, Math.PI * 2);
+                        ctx.arc(hipX + (p.facing === 'right' ? 12 : -12), p.y + 26, 14, 0, Math.PI * 2);
                         ctx.fill();
                     }
 
