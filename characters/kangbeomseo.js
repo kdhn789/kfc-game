@@ -122,11 +122,11 @@ module.exports = {
                         attackBox.y + enemy.height > enemy.y) {
                         
                         if (!(room.isSingle && room.botDifficulty === 'sandbag' && id === 'bot')) {
-                            enemy.hp -= 15;
+                            enemy.hp -= 27;
                             if (enemy.hp < 0) enemy.hp = 0;
                         }
 
-                        room.screenShake = 22;
+                        room.screenShake = 30;
                         room.floatingTexts.push({
                             x: enemy.x + enemy.width / 2,
                             y: enemy.y,
