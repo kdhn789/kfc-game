@@ -77,7 +77,7 @@ module.exports = {
 
     onRSkill: (p, room, socketId) => {
         const now = Date.now();
-        const cooldown = 3500;
+        const cooldown = 3700;
 
         if (!p.lastRSkillTime || now - p.lastRSkillTime >= cooldown) {
             p.lastRSkillTime = now;
@@ -101,7 +101,7 @@ module.exports = {
             }
 
             if (targetEnemy) {
-                const attachDuration = 1500;
+                const attachDuration = 1000;
                 const tickInterval = 100; 
                 let elapsed = 0;
 
