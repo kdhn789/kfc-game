@@ -157,7 +157,7 @@ module.exports = {
                                 room.floatingTexts.push({
                                     x: enemy.x + enemy.width / 2,
                                     y: enemy.y - 20,
-                                    text: "읏!,
+                                    text: "읏!",
                                     color: '#ff9800',
                                     life: 35
                                 });
