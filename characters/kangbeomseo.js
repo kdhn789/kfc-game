@@ -37,7 +37,7 @@ module.exports = {
 
             if (targetEnemy) {
                 // 눈물 두 방울 흘리는 대사 및 시각 표현
-                targetEnemy.dialogue = "나 너무 힘들어ㅜㅜ 💧💧";
+                targetEnemy.dialogue = "나 너무 힘들어ㅜㅜ";
                 targetEnemy.dialogueTimer = 60;
 
                 const originalSpeed = targetEnemy.speed;
@@ -46,7 +46,7 @@ module.exports = {
                 room.floatingTexts.push({
                     x: targetEnemy.x + targetEnemy.width / 2,
                     y: targetEnemy.y - 10,
-                    text: "💧💧 눈물 뚝뚝",
+                    text: "💧",
                     color: '#00bcd4',
                     life: 45
                 });
@@ -143,7 +143,7 @@ module.exports = {
                         room.floatingTexts.push({
                             x: enemy.x + enemy.width / 2,
                             y: enemy.y - 20,
-                            text: "벽꽝 직행!",
+                            text: "아잇!",
                             color: '#ffeb3b',
                             life: 35
                         });
@@ -157,7 +157,7 @@ module.exports = {
                                 room.floatingTexts.push({
                                     x: enemy.x + enemy.width / 2,
                                     y: enemy.y - 20,
-                                    text: "더블 벽꽝!",
+                                    text: "읏!,
                                     color: '#ff9800',
                                     life: 35
                                 });
